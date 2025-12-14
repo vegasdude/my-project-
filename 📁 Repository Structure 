@@ -1,0 +1,8 @@
+my-project/
+├── experiments/        # Test code, prototypes
+├── scripts/            # Small scripts & utilities
+├── configs/            # Configuration samples
+├── docs/               # Notes, drafts, references
+├── samples/            # Example code or demos
+├── archive/             # Old or inactive work
+└── README.md
