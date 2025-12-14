@@ -1,0 +1,3 @@
+# Node.js sample
+cd experiments
+node index.js
