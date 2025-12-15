@@ -1,0 +1,2 @@
+git submodule add https://github.com/onnx/onnx.git external/onnx
+git submodule add https://github.com/Tencent/ncnn.git external/ncnn
