@@ -1,0 +1,4 @@
+## External Dependencies
+
+- ONNX (forked): https://github.com/AnthonyDudek/onnx
+- NCNN (forked): https://github.com/AnthonyDudek/ncnn
