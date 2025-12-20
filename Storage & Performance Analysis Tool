@@ -1,0 +1,352 @@
+"""
+Storage and Performance Analysis Tool
+Practical examples of working with storage, processing speed, and simulations
+"""
+
+import time
+import random
+import os
+import sys
+from typing import List, Dict
+
+# ============================================================================
+# 1. STORAGE UTILITIES (Terabytes)
+# ============================================================================
+
+class StorageAnalyzer:
+    """Tools for analyzing and converting storage units"""
+    
+    @staticmethod
+    def convert_bytes(bytes_size: int) -> Dict[str, float]:
+        """Convert bytes to various units"""
+        return {
+            'bytes': bytes_size,
+            'KB': bytes_size / 1024,
+            'MB': bytes_size / (1024 ** 2),
+            'GB': bytes_size / (1024 ** 3),
+            'TB': bytes_size / (1024 ** 4),
+            'PB': bytes_size / (1024 ** 5)
+        }
+    
+    @staticmethod
+    def format_size(bytes_size: int) -> str:
+        """Format bytes into human-readable size"""
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB', 'PB']:
+            if bytes_size < 1024.0:
+                return f"{bytes_size:.2f} {unit}"
+            bytes_size /= 1024.0
+        return f"{bytes_size:.2f} EB"
+    
+    @staticmethod
+    def estimate_file_count(total_storage_tb: float, avg_file_size_mb: float) -> int:
+        """Estimate how many files fit in given storage"""
+        total_mb = total_storage_tb * 1024 * 1024
+        return int(total_mb / avg_file_size_mb)
+    
+    @staticmethod
+    def analyze_directory(path: str = ".") -> Dict:
+        """Analyze storage usage of a directory"""
+        total_size = 0
+        file_count = 0
+        
+        try:
+            for dirpath, dirnames, filenames in os.walk(path):
+                for filename in filenames:
+                    filepath = os.path.join(dirpath, filename)
+                    try:
+                        total_size += os.path.getsize(filepath)
+                        file_count += 1
+                    except:
+                        pass
+        except:
+            pass
+        
+        return {
+            'total_size_bytes': total_size,
+            'total_size_formatted': StorageAnalyzer.format_size(total_size),
+            'file_count': file_count,
+            'avg_file_size': StorageAnalyzer.format_size(total_size / file_count) if file_count > 0 else "0 B"
+        }
+
+
+# ============================================================================
+# 2. PERFORMANCE BENCHMARKING (Petaflops/FLOPS)
+# ============================================================================
+
+class PerformanceBenchmark:
+    """Tools for measuring computational performance"""
+    
+    @staticmethod
+    def benchmark_floating_point_ops(iterations: int = 10000000) -> Dict[str, float]:
+        """Benchmark floating-point operations per second"""
+        operations = ['+', '-', '*', '/']
+        results = {}
+        
+        for op in operations:
+            start = time.perf_counter()
+            a, b = 1.5, 2.5
+            
+            if op == '+':
+                for _ in range(iterations):
+                    c = a + b
+            elif op == '-':
+                for _ in range(iterations):
+                    c = a - b
+            elif op == '*':
+                for _ in range(iterations):
+                    c = a * b
+            elif op == '/':
+                for _ in range(iterations):
+                    c = a / b
+            
+            elapsed = time.perf_counter() - start
+            flops = iterations / elapsed
+            
+            results[f'{op}_operation'] = {
+                'FLOPS': flops,
+                'MFLOPS': flops / 1e6,
+                'GFLOPS': flops / 1e9,
+                'time_seconds': elapsed
+            }
+        
+        return results
+    
+    @staticmethod
+    def matrix_multiply_benchmark(size: int = 100) -> Dict:
+        """Benchmark matrix multiplication performance"""
+        # Create random matrices
+        matrix_a = [[random.random() for _ in range(size)] for _ in range(size)]
+        matrix_b = [[random.random() for _ in range(size)] for _ in range(size)]
+        
+        start = time.perf_counter()
+        
+        # Perform matrix multiplication
+        result = [[0 for _ in range(size)] for _ in range(size)]
+        for i in range(size):
+            for j in range(size):
+                for k in range(size):
+                    result[i][j] += matrix_a[i][k] * matrix_b[k][j]
+        
+        elapsed = time.perf_counter() - start
+        
+        # Calculate FLOPS (2 ops per multiply-add, size^3 operations)
+        operations = 2 * (size ** 3)
+        flops = operations / elapsed
+        
+        return {
+            'matrix_size': f"{size}x{size}",
+            'operations': operations,
+            'time_seconds': elapsed,
+            'FLOPS': flops,
+            'MFLOPS': flops / 1e6,
+            'GFLOPS': flops / 1e9
+        }
+
+
+# ============================================================================
+# 3. SIMULATION EXAMPLES
+# ============================================================================
+
+class MonteCarloSimulator:
+    """Monte Carlo simulation examples"""
+    
+    @staticmethod
+    def estimate_pi(num_samples: int = 1000000) -> Dict:
+        """Estimate Pi using Monte Carlo method"""
+        inside_circle = 0
+        
+        start = time.perf_counter()
+        
+        for _ in range(num_samples):
+            x = random.uniform(-1, 1)
+            y = random.uniform(-1, 1)
+            if x*x + y*y <= 1:
+                inside_circle += 1
+        
+        elapsed = time.perf_counter() - start
+        pi_estimate = 4 * inside_circle / num_samples
+        
+        return {
+            'samples': num_samples,
+            'pi_estimate': pi_estimate,
+            'actual_pi': 3.14159265359,
+            'error': abs(pi_estimate - 3.14159265359),
+            'time_seconds': elapsed
+        }
+    
+    @staticmethod
+    def random_walk_2d(steps: int = 1000) -> Dict:
+        """Simulate a 2D random walk"""
+        x, y = 0, 0
+        positions = [(x, y)]
+        
+        for _ in range(steps):
+            direction = random.choice(['N', 'S', 'E', 'W'])
+            if direction == 'N':
+                y += 1
+            elif direction == 'S':
+                y -= 1
+            elif direction == 'E':
+                x += 1
+            elif direction == 'W':
+                x -= 1
+            positions.append((x, y))
+        
+        distance_from_origin = (x**2 + y**2) ** 0.5
+        
+        return {
+            'steps': steps,
+            'final_position': (x, y),
+            'distance_from_origin': distance_from_origin,
+            'path': positions[:10]  # First 10 positions as sample
+        }
+    
+    @staticmethod
+    def stock_price_simulation(initial_price: float, days: int, volatility: float = 0.02) -> List[float]:
+        """Simulate stock price movement using geometric Brownian motion"""
+        prices = [initial_price]
+        
+        for _ in range(days):
+            change = random.gauss(0, volatility)
+            new_price = prices[-1] * (1 + change)
+            prices.append(max(new_price, 0.01))  # Prevent negative prices
+        
+        return prices
+
+
+class PhysicsSimulator:
+    """Physics simulation examples"""
+    
+    @staticmethod
+    def projectile_motion(velocity: float, angle_degrees: float, time_step: float = 0.1) -> List[Dict]:
+        """Simulate projectile motion"""
+        import math
+        
+        angle_rad = math.radians(angle_degrees)
+        vx = velocity * math.cos(angle_rad)
+        vy = velocity * math.sin(angle_rad)
+        
+        x, y = 0, 0
+        g = 9.81  # gravity
+        trajectory = []
+        
+        while y >= 0:
+            trajectory.append({'time': len(trajectory) * time_step, 'x': x, 'y': y})
+            x += vx * time_step
+            y += vy * time_step
+            vy -= g * time_step
+        
+        return trajectory
+    
+    @staticmethod
+    def simple_pendulum(length: float, initial_angle: float, steps: int = 100) -> List[Dict]:
+        """Simulate simple pendulum motion"""
+        import math
+        
+        g = 9.81
+        theta = math.radians(initial_angle)
+        omega = 0  # angular velocity
+        dt = 0.01
+        
+        positions = []
+        
+        for i in range(steps):
+            positions.append({
+                'step': i,
+                'angle_degrees': math.degrees(theta),
+                'angular_velocity': omega
+            })
+            
+            # Simple Euler integration
+            alpha = -(g / length) * math.sin(theta)
+            omega += alpha * dt
+            theta += omega * dt
+        
+        return positions
+
+
+# ============================================================================
+# DEMO RUNNER
+# ============================================================================
+
+def run_demos():
+    """Run all demonstrations"""
+    
+    print("=" * 70)
+    print("STORAGE ANALYSIS DEMO")
+    print("=" * 70)
+    
+    # Storage conversions
+    test_size = 5 * (1024 ** 4)  # 5 TB in bytes
+    conversions = StorageAnalyzer.convert_bytes(test_size)
+    print(f"\n5 TB converted to different units:")
+    for unit, value in conversions.items():
+        print(f"  {unit}: {value:,.2f}")
+    
+    # File count estimation
+    file_count = StorageAnalyzer.estimate_file_count(1.0, 5.0)
+    print(f"\nFiles that fit in 1TB (avg 5MB each): {file_count:,}")
+    
+    # Current directory analysis
+    print(f"\nCurrent directory analysis:")
+    dir_info = StorageAnalyzer.analyze_directory(".")
+    for key, value in dir_info.items():
+        print(f"  {key}: {value}")
+    
+    print("\n" + "=" * 70)
+    print("PERFORMANCE BENCHMARK DEMO")
+    print("=" * 70)
+    
+    # Floating-point operations
+    print("\nBenchmarking floating-point operations (10M iterations):")
+    fp_results = PerformanceBenchmark.benchmark_floating_point_ops(10000000)
+    for op, data in fp_results.items():
+        print(f"\n{op}:")
+        print(f"  MFLOPS: {data['MFLOPS']:,.2f}")
+        print(f"  Time: {data['time_seconds']:.4f} seconds")
+    
+    # Matrix multiplication
+    print("\nMatrix multiplication benchmark (100x100):")
+    matrix_results = PerformanceBenchmark.matrix_multiply_benchmark(100)
+    for key, value in matrix_results.items():
+        if isinstance(value, float):
+            print(f"  {key}: {value:,.2f}")
+        else:
+            print(f"  {key}: {value}")
+    
+    print("\n" + "=" * 70)
+    print("SIMULATION DEMOS")
+    print("=" * 70)
+    
+    # Pi estimation
+    print("\nMonte Carlo Pi Estimation (1M samples):")
+    pi_result = MonteCarloSimulator.estimate_pi(1000000)
+    for key, value in pi_result.items():
+        if isinstance(value, float):
+            print(f"  {key}: {value:.8f}")
+        else:
+            print(f"  {key}: {value}")
+    
+    # Random walk
+    print("\nRandom Walk Simulation (1000 steps):")
+    walk_result = MonteCarloSimulator.random_walk_2d(1000)
+    print(f"  Final position: {walk_result['final_position']}")
+    print(f"  Distance from origin: {walk_result['distance_from_origin']:.2f}")
+    
+    # Stock price simulation
+    print("\nStock Price Simulation (30 days, starting at $100):")
+    prices = MonteCarloSimulator.stock_price_simulation(100.0, 30, 0.02)
+    print(f"  Starting price: ${prices[0]:.2f}")
+    print(f"  Ending price: ${prices[-1]:.2f}")
+    print(f"  Change: {((prices[-1] - prices[0]) / prices[0] * 100):.2f}%")
+    
+    # Projectile motion
+    print("\nProjectile Motion (45° angle, 20 m/s):")
+    trajectory = PhysicsSimulator.projectile_motion(20, 45, 0.1)
+    print(f"  Max height: {max(p['y'] for p in trajectory):.2f} meters")
+    print(f"  Range: {trajectory[-1]['x']:.2f} meters")
+    print(f"  Flight time: {trajectory[-1]['time']:.2f} seconds")
+
+
+if __name__ == "__main__":
+    run_demos()
