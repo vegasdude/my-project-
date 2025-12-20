@@ -1,0 +1,134 @@
+# Computing Concepts Reference Guide
+
+## Overview
+This document explains three fundamental computing concepts: data storage (terabytes), processing speed (petaflops), and simulations.
+
+---
+
+## 1. Terabytes (TB) - Data Storage
+
+### Definition
+A terabyte is a unit of digital information storage equal to 1,000 gigabytes (or more precisely, 1,024 GB in binary).
+
+### Scale Reference
+- **1 KB** (Kilobyte) = 1,000 bytes
+- **1 MB** (Megabyte) = 1,000 KB
+- **1 GB** (Gigabyte) = 1,000 MB
+- **1 TB** (Terabyte) = 1,000 GB
+- **1 PB** (Petabyte) = 1,000 TB
+
+### Real-World Examples
+- A standard laptop hard drive: 256 GB - 1 TB
+- A high-quality movie: ~5-10 GB
+- A terabyte can hold approximately:
+  - 200,000 songs
+  - 500 hours of HD video
+  - 300,000 photos
+
+### Use Cases
+- Personal external hard drives
+- Cloud storage plans
+- Database storage requirements
+- Video game installations
+
+---
+
+## 2. Petaflops - Processing Speed
+
+### Definition
+A petaflop measures computational speed, specifically one quadrillion (10^15) floating-point operations per second (FLOPS).
+
+### Scale Reference
+- **FLOPS** = Floating-Point Operations Per Second
+- **MFLOPS** = Million FLOPS
+- **GFLOPS** = Billion FLOPS
+- **TFLOPS** = Trillion FLOPS
+- **PFLOPS** = Quadrillion FLOPS (Petaflops)
+
+### Real-World Examples
+- Modern gaming GPU: 10-40 TFLOPS
+- High-end supercomputer: 200+ PFLOPS
+- The world's fastest supercomputers operate in the exaflops range (1,000 petaflops)
+
+### Use Cases
+- Scientific research (climate modeling, molecular dynamics)
+- Artificial intelligence training
+- Cryptocurrency mining
+- Weather forecasting
+- Nuclear simulation
+
+---
+
+## 3. Simulations - Computational Modeling
+
+### Definition
+A simulation is a computer-based model that recreates real-world processes, systems, or phenomena to study their behavior without physical experimentation.
+
+### Types of Simulations
+1. **Physics Simulations** - Modeling physical phenomena (gravity, collisions, fluid dynamics)
+2. **Weather Simulations** - Predicting atmospheric conditions
+3. **Financial Simulations** - Modeling market behavior and risk
+4. **Training Simulations** - Flight simulators, medical training
+5. **Game Engines** - Real-time physics and rendering
+
+### Requirements
+Simulations typically need:
+- **Storage (TB/PB)**: For input data, results, and model parameters
+- **Processing Power (TFLOPS/PFLOPS)**: For calculations
+- **Memory (RAM)**: For active computation
+- **Time**: Some simulations take days or weeks on supercomputers
+
+### Examples
+```python
+# Simple Monte Carlo simulation example
+import random
+
+def simulate_coin_flips(num_trials):
+    """Simulate coin flips to estimate probability"""
+    heads = 0
+    for _ in range(num_trials):
+        if random.random() < 0.5:
+            heads += 1
+    return heads / num_trials
+
+# Run simulation
+result = simulate_coin_flips(1000000)
+print(f"Probability of heads: {result}")
+# Expected output: ~0.5
+```
+
+---
+
+## How They Work Together
+
+### Example: Climate Modeling
+- **Storage**: Requires petabytes of historical weather data
+- **Processing**: Needs petaflops of computing power for complex calculations
+- **Simulation**: Runs models to predict future climate patterns
+
+### Example: Machine Learning
+- **Storage**: Training datasets can be terabytes in size
+- **Processing**: GPU clusters providing teraflops of compute
+- **Simulation**: Neural networks simulating pattern recognition
+
+---
+
+## Key Takeaways
+
+| Concept | Measures | Example Unit |
+|---------|----------|--------------|
+| **Terabytes** | Storage capacity | How much data you can save |
+| **Petaflops** | Processing speed | How fast you can compute |
+| **Simulation** | Computational process | What you're calculating |
+
+Think of it like cooking:
+- **Terabytes** = Size of your pantry (storage)
+- **Petaflops** = Speed of your stove (processing)
+- **Simulation** = The recipe you're following (process)
+
+---
+
+## Further Reading
+- [Understanding Computer Storage Units](https://en.wikipedia.org/wiki/Terabyte)
+- [FLOPS and Supercomputing Performance](https://en.wikipedia.org/wiki/FLOPS)
+- [Introduction to Computer Simulation](https://en.wikipedia.org/wiki/Computer_simulation)
