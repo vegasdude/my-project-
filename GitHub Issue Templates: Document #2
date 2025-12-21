@@ -1,0 +1,152 @@
+# Bug Report Template
+## .github/ISSUE_TEMPLATE/bug_report.md
+
+---
+name: Bug Report
+about: Create a report to help us improve
+title: '[BUG] '
+labels: bug
+assignees: ''
+---
+
+## 🐛 Bug Description
+A clear and concise description of what the bug is.
+
+## 📋 Steps to Reproduce
+1. Go to '...'
+2. Click on '...'
+3. Run command '...'
+4. See error
+
+## ✅ Expected Behavior
+A clear and concise description of what you expected to happen.
+
+## ❌ Actual Behavior
+What actually happened.
+
+## 📸 Screenshots
+If applicable, add screenshots to help explain your problem.
+
+## 💻 Environment
+- OS: [e.g. Ubuntu 22.04]
+- Python Version: [e.g. 3.11.2]
+- Project Version: [e.g. 0.1.0]
+- Installation Method: [pip/docker/source]
+
+## 📝 Additional Context
+Add any other context about the problem here.
+
+## 🔍 Possible Solution
+If you have suggestions on how to fix the bug, please describe them here.
+
+---
+
+# Feature Request Template
+## .github/ISSUE_TEMPLATE/feature_request.md
+
+---
+name: Feature Request
+about: Suggest an idea for this project
+title: '[FEATURE] '
+labels: enhancement
+assignees: ''
+---
+
+## 🚀 Feature Description
+A clear and concise description of the feature you'd like to see.
+
+## 💡 Motivation
+Why is this feature important? What problem does it solve?
+
+## 📝 Proposed Solution
+Describe the solution you'd like to see implemented.
+
+## 🔄 Alternatives Considered
+Describe alternative solutions or features you've considered.
+
+## 📋 Additional Context
+Add any other context, screenshots, or examples about the feature request.
+
+## ✅ Acceptance Criteria
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+## 📊 Priority
+- [ ] Critical
+- [ ] High
+- [ ] Medium
+- [ ] Low
+
+---
+
+# Pull Request Template
+## .github/PULL_REQUEST_TEMPLATE.md
+
+## 📋 Description
+Brief description of the changes introduced by this PR.
+
+## 🎯 Related Issue
+Fixes #(issue number)
+
+## 🔄 Type of Change
+- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
+- [ ] ✨ New feature (non-breaking change which adds functionality)
+- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] 📝 Documentation update
+- [ ] 🎨 Code style update (formatting, renaming)
+- [ ] ♻️ Code refactoring (no functional changes)
+- [ ] ⚡ Performance improvement
+- [ ] ✅ Test update
+- [ ] 🔧 Configuration change
+- [ ] 🏗️ Build/CI update
+
+## 🧪 Testing
+- [ ] Tests pass locally
+- [ ] New tests added for changes
+- [ ] All tests pass in CI
+- [ ] Manual testing completed
+
+### Test Commands Run
+```bash
+# Example:
+pytest
+make test
+make lint
+```
+
+## 📸 Screenshots (if applicable)
+Add screenshots to demonstrate the changes.
+
+## ✅ Checklist
+- [ ] Code follows project style guidelines
+- [ ] Self-review completed
+- [ ] Comments added for complex code
+- [ ] Documentation updated
+- [ ] No new warnings generated
+- [ ] Tests added/updated
+- [ ] All tests passing
+- [ ] Branch is up to date with main
+
+## 📝 Additional Notes
+Any additional information reviewers should know.
+
+## 🔗 Dependencies
+List any dependencies required by this PR.
+
+---
+
+# Configuration Template
+## .github/ISSUE_TEMPLATE/config.yml
+
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/yourusername/yourproject/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 📚 Documentation
+    url: https://your-docs-url.com
+    about: Read the documentation for help and tutorials
+  - name: 💡 Feature Ideas
+    url: https://github.com/yourusername/yourproject/discussions/categories/ideas
+    about: Share and discuss feature ideas with the community
