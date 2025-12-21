@@ -1,0 +1,111 @@
+@echo off
+REM setup.bat - Automated project setup script for Windows
+
+echo ========================================
+echo Starting automated project setup...
+echo ========================================
+
+REM Check if Python is installed
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Python is not installed or not in PATH
+    echo Please install Python 3.9 or higher
+    pause
+    exit /b 1
+)
+
+echo Found Python:
+python --version
+
+REM Check if git is installed
+git --version >nul 2>&1
+if errorlevel 1 (
+    echo WARNING: Git is not installed. Some features may not work.
+)
+
+REM Remove old virtual environment if it exists
+if exist venv (
+    echo Removing old virtual environment...
+    rmdir /s /q venv
+)
+
+REM Create virtual environment
+echo.
+echo Creating virtual environment...
+python -m venv venv
+
+REM Activate virtual environment
+echo Activating virtual environment...
+call venv\Scripts\activate.bat
+
+REM Upgrade pip
+echo.
+echo Upgrading pip...
+python -m pip install --upgrade pip setuptools wheel
+
+REM Install dependencies
+echo.
+echo Installing dependencies...
+if exist requirements.txt (
+    pip install -r requirements.txt
+    echo Dependencies installed successfully!
+) else (
+    echo WARNING: requirements.txt not found
+)
+
+REM Install development dependencies
+if exist requirements-dev.txt (
+    echo.
+    echo Installing development dependencies...
+    pip install -r requirements-dev.txt
+)
+
+REM Install pre-commit hooks
+if exist .pre-commit-config.yaml (
+    echo.
+    echo Installing pre-commit hooks...
+    pip install pre-commit
+    pre-commit install
+    echo Pre-commit hooks installed!
+) else (
+    echo WARNING: .pre-commit-config.yaml not found
+)
+
+REM Create .env file from example
+if not exist .env (
+    if exist .env.example (
+        echo.
+        echo Creating .env file...
+        copy .env.example .env
+        echo Please update .env with your configuration
+    )
+)
+
+REM Create necessary directories
+echo.
+echo Creating project directories...
+if not exist logs mkdir logs
+if not exist data mkdir data
+if not exist tests mkdir tests
+if not exist output mkdir output
+
+REM Summary
+echo.
+echo ========================================
+echo Setup Complete!
+echo ========================================
+echo.
+echo Next steps:
+echo   1. Activate virtual environment: venv\Scripts\activate
+echo   2. Configure .env file if needed
+echo   3. Run your application: python main.py
+echo.
+echo Useful commands:
+echo   - Run tests: pytest
+echo   - Format code: black .
+echo   - Lint code: flake8 .
+echo   - Type check: mypy .
+echo.
+echo Happy coding!
+echo.
+pause
