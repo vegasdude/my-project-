@@ -5,9 +5,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "your-project-name"
+name = "my-project-"
 version = "0.1.0"
-description = "Your project description"
+description = "My GitHub Repo or all-repos"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
