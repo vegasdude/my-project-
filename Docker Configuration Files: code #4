@@ -1,0 +1,95 @@
+# Dockerfile
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Create working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency files first (for better caching)
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# Copy project files
+COPY . .
+
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Expose port (modify if needed)
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD python -c "print('healthy')" || exit 1
+
+# Default command (modify based on your app)
+CMD ["python", "main.py"]
+
+# -----------------------------------------------------------
+# docker-compose.yml
+# -----------------------------------------------------------
+# version: '3.8'
+# 
+# services:
+#   app:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: python-app
+#     volumes:
+#       - .:/app
+#       - pip-cache:/root/.cache/pip
+#     ports:
+#       - "8000:8000"
+#     environment:
+#       - PYTHONUNBUFFERED=1
+#       - ENV=development
+#     env_file:
+#       - .env
+#     restart: unless-stopped
+#     command: python main.py
+# 
+#   # Optional: Add a database service
+#   # db:
+#   #   image: postgres:15-alpine
+#   #   container_name: postgres-db
+#   #   environment:
+#   #     POSTGRES_USER: user
+#   #     POSTGRES_PASSWORD: password
+#   #     POSTGRES_DB: mydb
+#   #   volumes:
+#   #     - postgres-data:/var/lib/postgresql/data
+#   #   ports:
+#   #     - "5432:5432"
+# 
+#   # Optional: Add Redis cache
+#   # redis:
+#   #   image: redis:7-alpine
+#   #   container_name: redis-cache
+#   #   ports:
+#   #     - "6379:6379"
+# 
+# volumes:
+#   pip-cache:
+#   # postgres-data:
+# 
+# networks:
+#   default:
+#     name: python-app-network
