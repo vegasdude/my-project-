@@ -43,10 +43,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/your-project"
+Homepage = "https://github.com/vegasdude/your-project"
 Documentation = "https://your-project.readthedocs.io"
-Repository = "https://github.com/yourusername/your-project"
-Issues = "https://github.com/yourusername/your-project/issues"
+Repository = "https://github.com/vegasdude/your-project"
+Issues = "https://github.com/vegasdude/your-project/issues"
 
 [tool.black]
 line-length = 100
