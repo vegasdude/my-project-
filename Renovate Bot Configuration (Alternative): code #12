@@ -14,10 +14,10 @@
     "automated"
   ],
   "assignees": [
-    "yourusername"
+    "vegasdude"
   ],
   "reviewers": [
-    "yourusername"
+    "vegasdude"
   ],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,
@@ -99,7 +99,7 @@
       "security"
     ],
     "assignees": [
-      "yourusername"
+      "vegasdude"
     ]
   }
 }
