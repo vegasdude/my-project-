@@ -12,7 +12,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Anthony Dudek", email = "dudekanthony567@gmail.com"}
 ]
 keywords = ["python", "automation", "ci-cd"]
 classifiers = [
