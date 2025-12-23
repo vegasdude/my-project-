@@ -1,0 +1,10 @@
+# Project Maintenance Tools
+
+Small, reusable tools to keep a repository clean and healthy.
+
+## Scripts
+
+- `clean_project.sh`: Remove common build artifacts and caches.
+- `project_health.py`: Check for key project files, large untracked files, and long lines.
+
+## Usage
