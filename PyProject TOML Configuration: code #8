@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "https://github.com/vegasdude/my-project-"
 version = "0.1.0"
-description = "My GitHub Repositories - all-repos"
+description = "My GitHub Repositories and or all-repositories"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
