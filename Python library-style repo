@@ -1,0 +1,11 @@
+my-awesome-lib/
+├─ pyproject.toml
+├─ README.md
+├─ src/
+│  └─ my_awesome_lib/
+│     ├─ __init__.py
+│     ├─ math_utils.py
+│     └─ string_utils.py
+└─ tests/
+   ├─ test_math_utils.py
+   └─ test_string_utils.py
