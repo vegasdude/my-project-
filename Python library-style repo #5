@@ -1,0 +1,4 @@
+from my_awesome_lib import add, snake_to_camel
+
+print(add(2, 3))
+print(snake_to_camel("user_profile"))
