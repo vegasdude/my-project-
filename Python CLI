@@ -1,0 +1,10 @@
+my-cli-app/
+├─ pyproject.toml
+├─ README.md
+├─ src/
+│  └─ my_cli_app/
+│     ├─ __init__.py
+│     ├─ core.py
+│     └─ main.py
+└─ tests/
+   └─ test_core.py
