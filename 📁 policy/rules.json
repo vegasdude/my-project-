@@ -1,0 +1,12 @@
+{
+  "max_altitude_meters": 120,
+  "max_speed_mps": 15,
+  "no_fly_zones": [
+    {
+      "name": "Airport Buffer",
+      "center": [37.6213, -122.3790],
+      "radius_meters": 5000
+    }
+  ],
+  "require_logging": true
+}
