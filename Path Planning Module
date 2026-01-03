@@ -1,0 +1,387 @@
+"""
+Path Planning Module
+Implements A*, RRT, and other path planning algorithms
+"""
+import numpy as np
+import heapq
+from collections import defaultdict
+import matplotlib.pyplot as plt
+from typing import List, Tuple, Optional
+
+class Node:
+    """Node for path planning"""
+    def __init__(self, position, parent=None):
+        self.position = position
+        self.parent = parent
+        self.g = 0  # Cost from start
+        self.h = 0  # Heuristic to goal
+        self.f = 0  # Total cost
+    
+    def __lt__(self, other):
+        return self.f < other.f
+    
+    def __eq__(self, other):
+        return self.position == other.position
+
+
+class PathPlanner:
+    """Base path planning class"""
+    
+    def __init__(self, grid_size=(100, 100), resolution=1.0):
+        self.grid_size = grid_size
+        self.resolution = resolution
+        self.obstacles = set()
+        
+    def add_obstacle(self, x, y, radius=1):
+        """Add circular obstacle"""
+        for i in range(-radius, radius + 1):
+            for j in range(-radius, radius + 1):
+                if i*i + j*j <= radius*radius:
+                    obs_x, obs_y = x + i, y + j
+                    if 0 <= obs_x < self.grid_size[0] and 0 <= obs_y < self.grid_size[1]:
+                        self.obstacles.add((obs_x, obs_y))
+    
+    def add_rectangular_obstacle(self, x1, y1, x2, y2):
+        """Add rectangular obstacle"""
+        for x in range(min(x1, x2), max(x1, x2) + 1):
+            for y in range(min(y1, y2), max(y1, y2) + 1):
+                if 0 <= x < self.grid_size[0] and 0 <= y < self.grid_size[1]:
+                    self.obstacles.add((x, y))
+    
+    def is_collision(self, position):
+        """Check if position collides with obstacle"""
+        x, y = int(position[0]), int(position[1])
+        return (x, y) in self.obstacles
+    
+    def is_valid(self, position):
+        """Check if position is valid (in bounds and no collision)"""
+        x, y = position
+        return (0 <= x < self.grid_size[0] and 
+                0 <= y < self.grid_size[1] and 
+                not self.is_collision(position))
+
+
+class AStarPlanner(PathPlanner):
+    """A* path planning algorithm"""
+    
+    def __init__(self, grid_size=(100, 100)):
+        super().__init__(grid_size)
+        
+    def heuristic(self, pos1, pos2):
+        """Euclidean distance heuristic"""
+        return np.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
+    
+    def get_neighbors(self, position):
+        """Get valid neighboring positions (8-connected)"""
+        x, y = position
+        neighbors = []
+        
+        # 8 directions
+        for dx, dy in [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]:
+            new_pos = (x + dx, y + dy)
+            if self.is_valid(new_pos):
+                neighbors.append(new_pos)
+        
+        return neighbors
+    
+    def plan(self, start, goal):
+        """
+        Find path from start to goal using A*
+        
+        Args:
+            start: (x, y) tuple
+            goal: (x, y) tuple
+            
+        Returns:
+            path: List of (x, y) tuples or None if no path found
+        """
+        start_node = Node(start)
+        goal_node = Node(goal)
+        
+        open_list = []
+        closed_set = set()
+        heapq.heappush(open_list, start_node)
+        
+        while open_list:
+            current = heapq.heappop(open_list)
+            closed_set.add(current.position)
+            
+            # Goal reached
+            if current.position == goal_node.position:
+                path = []
+                while current:
+                    path.append(current.position)
+                    current = current.parent
+                return path[::-1]
+            
+            # Explore neighbors
+            for neighbor_pos in self.get_neighbors(current.position):
+                if neighbor_pos in closed_set:
+                    continue
+                
+                neighbor = Node(neighbor_pos, current)
+                
+                # Calculate costs
+                neighbor.g = current.g + self.heuristic(current.position, neighbor_pos)
+                neighbor.h = self.heuristic(neighbor_pos, goal_node.position)
+                neighbor.f = neighbor.g + neighbor.h
+                
+                # Check if already in open list with better cost
+                if any(node.position == neighbor_pos and node.f <= neighbor.f 
+                      for node in open_list):
+                    continue
+                
+                heapq.heappush(open_list, neighbor)
+        
+        return None  # No path found
+
+
+class RRTPlanner(PathPlanner):
+    """RRT (Rapidly-exploring Random Tree) path planner"""
+    
+    def __init__(self, grid_size=(100, 100), step_size=5, max_iterations=5000):
+        super().__init__(grid_size)
+        self.step_size = step_size
+        self.max_iterations = max_iterations
+        
+    def random_point(self):
+        """Generate random point in space"""
+        return (np.random.randint(0, self.grid_size[0]),
+                np.random.randint(0, self.grid_size[1]))
+    
+    def nearest_node(self, tree, point):
+        """Find nearest node in tree to point"""
+        return min(tree, key=lambda node: 
+                  self.heuristic(node.position, point))
+    
+    def heuristic(self, pos1, pos2):
+        """Euclidean distance"""
+        return np.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
+    
+    def steer(self, from_pos, to_pos):
+        """Steer from one position towards another"""
+        dist = self.heuristic(from_pos, to_pos)
+        if dist < self.step_size:
+            return to_pos
+        
+        # Move step_size towards to_pos
+        theta = np.arctan2(to_pos[1] - from_pos[1], to_pos[0] - from_pos[0])
+        new_x = from_pos[0] + self.step_size * np.cos(theta)
+        new_y = from_pos[1] + self.step_size * np.sin(theta)
+        
+        return (int(new_x), int(new_y))
+    
+    def is_path_collision_free(self, from_pos, to_pos):
+        """Check if straight line path is collision free"""
+        steps = int(self.heuristic(from_pos, to_pos))
+        for i in range(steps + 1):
+            t = i / max(steps, 1)
+            x = int(from_pos[0] + t * (to_pos[0] - from_pos[0]))
+            y = int(from_pos[1] + t * (to_pos[1] - from_pos[1]))
+            if self.is_collision((x, y)):
+                return False
+        return True
+    
+    def plan(self, start, goal, goal_sample_rate=0.1):
+        """
+        Find path using RRT
+        
+        Args:
+            start: (x, y) tuple
+            goal: (x, y) tuple
+            goal_sample_rate: Probability of sampling goal
+            
+        Returns:
+            path: List of (x, y) tuples or None
+        """
+        start_node = Node(start)
+        tree = [start_node]
+        
+        for i in range(self.max_iterations):
+            # Sample point (occasionally sample goal)
+            if np.random.random() < goal_sample_rate:
+                random_point = goal
+            else:
+                random_point = self.random_point()
+            
+            # Find nearest node in tree
+            nearest = self.nearest_node(tree, random_point)
+            
+            # Steer towards random point
+            new_pos = self.steer(nearest.position, random_point)
+            
+            # Check if valid and collision free
+            if self.is_valid(new_pos) and \
+               self.is_path_collision_free(nearest.position, new_pos):
+                new_node = Node(new_pos, nearest)
+                tree.append(new_node)
+                
+                # Check if goal reached
+                if self.heuristic(new_pos, goal) < self.step_size:
+                    # Connect to goal
+                    if self.is_path_collision_free(new_pos, goal):
+                        goal_node = Node(goal, new_node)
+                        
+                        # Reconstruct path
+                        path = []
+                        current = goal_node
+                        while current:
+                            path.append(current.position)
+                            current = current.parent
+                        return path[::-1]
+        
+        return None  # No path found
+
+
+class PathSmoother:
+    """Smooth and optimize paths"""
+    
+    @staticmethod
+    def smooth_path(path, weight_data=0.5, weight_smooth=0.3, tolerance=0.000001):
+        """
+        Smooth path using gradient descent
+        
+        Args:
+            path: List of (x, y) waypoints
+            weight_data: Weight for staying close to original path
+            weight_smooth: Weight for smoothness
+            tolerance: Convergence tolerance
+            
+        Returns:
+            smoothed_path: Smoothed list of waypoints
+        """
+        if len(path) <= 2:
+            return path
+        
+        new_path = np.array(path, dtype=float)
+        change = tolerance
+        
+        while change >= tolerance:
+            change = 0.0
+            for i in range(1, len(path) - 1):
+                for j in range(2):  # x and y
+                    aux = new_path[i][j]
+                    
+                    new_path[i][j] += weight_data * (path[i][j] - new_path[i][j])
+                    new_path[i][j] += weight_smooth * \
+                                     (new_path[i-1][j] + new_path[i+1][j] - 2.0 * new_path[i][j])
+                    
+                    change += abs(aux - new_path[i][j])
+        
+        return [(int(x), int(y)) for x, y in new_path]
+    
+    @staticmethod
+    def simplify_path(path, epsilon=2.0):
+        """
+        Simplify path using Ramer-Douglas-Peucker algorithm
+        
+        Args:
+            path: List of (x, y) waypoints
+            epsilon: Distance threshold
+            
+        Returns:
+            simplified_path: Simplified waypoints
+        """
+        if len(path) < 3:
+            return path
+        
+        # Find point with max distance
+        dmax = 0
+        index = 0
+        end = len(path) - 1
+        
+        for i in range(1, end):
+            d = PathSmoother._perpendicular_distance(path[i], path[0], path[end])
+            if d > dmax:
+                index = i
+                dmax = d
+        
+        # Recursively simplify
+        if dmax > epsilon:
+            rec1 = PathSmoother.simplify_path(path[:index+1], epsilon)
+            rec2 = PathSmoother.simplify_path(path[index:], epsilon)
+            return rec1[:-1] + rec2
+        else:
+            return [path[0], path[end]]
+    
+    @staticmethod
+    def _perpendicular_distance(point, line_start, line_end):
+        """Calculate perpendicular distance from point to line"""
+        if line_start == line_end:
+            return np.sqrt((point[0] - line_start[0])**2 + (point[1] - line_start[1])**2)
+        
+        num = abs((line_end[1] - line_start[1]) * point[0] - 
+                 (line_end[0] - line_start[0]) * point[1] +
+                 line_end[0] * line_start[1] - 
+                 line_end[1] * line_start[0])
+        
+        den = np.sqrt((line_end[1] - line_start[1])**2 + 
+                     (line_end[0] - line_start[0])**2)
+        
+        return num / den
+
+
+# Example usage
+if __name__ == "__main__":
+    # Create environment
+    planner = AStarPlanner(grid_size=(100, 100))
+    
+    # Add obstacles
+    planner.add_rectangular_obstacle(20, 20, 30, 60)
+    planner.add_rectangular_obstacle(50, 40, 80, 50)
+    planner.add_obstacle(70, 70, 10)
+    
+    # Plan path
+    start = (10, 10)
+    goal = (90, 90)
+    
+    print("Planning path with A*...")
+    path = planner.plan(start, goal)
+    
+    if path:
+        print(f"Path found with {len(path)} waypoints!")
+        
+        # Smooth path
+        smoother = PathSmoother()
+        smooth_path = smoother.smooth_path(path)
+        simple_path = smoother.simplify_path(smooth_path, epsilon=3.0)
+        
+        print(f"Simplified to {len(simple_path)} waypoints")
+        
+        # Visualize
+        plt.figure(figsize=(10, 10))
+        
+        # Plot obstacles
+        obstacle_x = [o[0] for o in planner.obstacles]
+        obstacle_y = [o[1] for o in planner.obstacles]
+        plt.scatter(obstacle_x, obstacle_y, c='red', s=10, label='Obstacles')
+        
+        # Plot original path
+        path_x = [p[0] for p in path]
+        path_y = [p[1] for p in path]
+        plt.plot(path_x, path_y, 'b--', alpha=0.3, label='Original')
+        
+        # Plot smoothed path
+        smooth_x = [p[0] for p in smooth_path]
+        smooth_y = [p[1] for p in smooth_path]
+        plt.plot(smooth_x, smooth_y, 'g-', alpha=0.5, label='Smoothed')
+        
+        # Plot simplified path
+        simple_x = [p[0] for p in simple_path]
+        simple_y = [p[1] for p in simple_path]
+        plt.plot(simple_x, simple_y, 'b-', linewidth=2, label='Simplified')
+        plt.scatter(simple_x, simple_y, c='blue', s=50, zorder=5)
+        
+        # Plot start and goal
+        plt.scatter(*start, c='green', s=200, marker='o', label='Start', zorder=10)
+        plt.scatter(*goal, c='red', s=200, marker='*', label='Goal', zorder=10)
+        
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        plt.title('A* Path Planning with Smoothing')
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.axis('equal')
+        plt.show()
+    else:
+        print("No path found!")
