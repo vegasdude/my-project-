@@ -1,0 +1,360 @@
+"""
+Swarm Control Module
+Formation control and multi-agent coordination
+"""
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from typing import List, Tuple
+
+class SwarmAgent:
+    """Individual drone agent in swarm"""
+    
+    def __init__(self, agent_id, position, velocity=None):
+        self.id = agent_id
+        self.position = np.array(position, dtype=float)
+        self.velocity = np.array(velocity if velocity else [0, 0, 0], dtype=float)
+        self.desired_position = self.position.copy()
+        self.neighbors = []
+        
+    def update(self, dt=0.1):
+        """Update agent position based on velocity"""
+        self.position += self.velocity * dt
+        
+    def distance_to(self, other):
+        """Calculate distance to another agent"""
+        return np.linalg.norm(self.position - other.position)
+
+
+class SwarmController:
+    """
+    Swarm formation controller using Reynolds' Boids algorithm
+    with formation control
+    """
+    
+    def __init__(self, num_agents=10, bounds=50):
+        self.agents = []
+        self.bounds = bounds
+        self.formation_shape = 'circle'
+        
+        # Initialize agents randomly
+        for i in range(num_agents):
+            pos = np.random.rand(3) * bounds
+            vel = (np.random.rand(3) - 0.5) * 2
+            self.agents.append(SwarmAgent(i, pos, vel))
+        
+        # Control parameters
+        self.separation_distance = 5.0
+        self.neighbor_distance = 15.0
+        self.max_speed = 5.0
+        self.max_force = 2.0
+        
+        # Weights for different behaviors
+        self.w_separation = 1.5
+        self.w_alignment = 1.0
+        self.w_cohesion = 1.0
+        self.w_formation = 2.0
+        
+    def set_formation(self, shape='circle', center=None, radius=20):
+        """
+        Set desired formation shape
+        
+        Args:
+            shape: 'circle', 'line', 'grid', 'v', 'wedge'
+            center: Formation center (x, y, z)
+            radius: Formation size parameter
+        """
+        if center is None:
+            center = np.array([self.bounds/2, self.bounds/2, self.bounds/2])
+        
+        n = len(self.agents)
+        
+        if shape == 'circle':
+            for i, agent in enumerate(self.agents):
+                angle = 2 * np.pi * i / n
+                agent.desired_position = center + np.array([
+                    radius * np.cos(angle),
+                    radius * np.sin(angle),
+                    0
+                ])
+                
+        elif shape == 'line':
+            spacing = radius * 2 / n
+            for i, agent in enumerate(self.agents):
+                agent.desired_position = center + np.array([
+                    (i - n/2) * spacing,
+                    0,
+                    0
+                ])
+                
+        elif shape == 'grid':
+            cols = int(np.ceil(np.sqrt(n)))
+            rows = int(np.ceil(n / cols))
+            spacing = radius * 2 / max(cols, rows)
+            
+            for i, agent in enumerate(self.agents):
+                row = i // cols
+                col = i % cols
+                agent.desired_position = center + np.array([
+                    (col - cols/2) * spacing,
+                    (row - rows/2) * spacing,
+                    0
+                ])
+                
+        elif shape == 'v':
+            for i, agent in enumerate(self.agents):
+                side = -1 if i % 2 == 0 else 1
+                offset = i // 2
+                agent.desired_position = center + np.array([
+                    side * offset * 3,
+                    -offset * 5,
+                    0
+                ])
+                
+        elif shape == 'wedge':
+            # Arrow formation
+            for i, agent in enumerate(self.agents):
+                if i == 0:
+                    # Leader at front
+                    agent.desired_position = center + np.array([0, radius, 0])
+                else:
+                    # Wings spreading back
+                    side = -1 if i % 2 == 0 else 1
+                    row = (i + 1) // 2
+                    agent.desired_position = center + np.array([
+                        side * row * 5,
+                        radius - row * 5,
+                        0
+                    ])
+        
+        self.formation_shape = shape
+        
+    def update_neighbors(self):
+        """Update neighbor lists for each agent"""
+        for agent in self.agents:
+            agent.neighbors = [
+                other for other in self.agents
+                if other.id != agent.id and 
+                agent.distance_to(other) < self.neighbor_distance
+            ]
+    
+    def separation(self, agent):
+        """Separation: avoid crowding neighbors"""
+        steer = np.zeros(3)
+        count = 0
+        
+        for neighbor in agent.neighbors:
+            dist = agent.distance_to(neighbor)
+            if dist < self.separation_distance and dist > 0:
+                diff = agent.position - neighbor.position
+                diff = diff / (dist ** 2)  # Weight by distance
+                steer += diff
+                count += 1
+        
+        if count > 0:
+            steer = steer / count
+            
+        return steer
+    
+    def alignment(self, agent):
+        """Alignment: steer towards average heading of neighbors"""
+        if not agent.neighbors:
+            return np.zeros(3)
+        
+        avg_velocity = np.mean([n.velocity for n in agent.neighbors], axis=0)
+        steer = avg_velocity - agent.velocity
+        
+        return steer
+    
+    def cohesion(self, agent):
+        """Cohesion: steer towards average position of neighbors"""
+        if not agent.neighbors:
+            return np.zeros(3)
+        
+        center = np.mean([n.position for n in agent.neighbors], axis=0)
+        steer = center - agent.position
+        
+        return steer
+    
+    def formation_keeping(self, agent):
+        """Formation keeping: move towards desired position"""
+        steer = agent.desired_position - agent.position
+        return steer
+    
+    def obstacle_avoidance(self, agent):
+        """Avoid boundaries"""
+        steer = np.zeros(3)
+        margin = 10
+        
+        # Avoid boundaries
+        if agent.position[0] < margin:
+            steer[0] += margin - agent.position[0]
+        elif agent.position[0] > self.bounds - margin:
+            steer[0] -= agent.position[0] - (self.bounds - margin)
+            
+        if agent.position[1] < margin:
+            steer[1] += margin - agent.position[1]
+        elif agent.position[1] > self.bounds - margin:
+            steer[1] -= agent.position[1] - (self.bounds - margin)
+            
+        if agent.position[2] < margin:
+            steer[2] += margin - agent.position[2]
+        elif agent.position[2] > self.bounds - margin:
+            steer[2] -= agent.position[2] - (self.bounds - margin)
+        
+        return steer * 2
+    
+    def limit_vector(self, vector, max_val):
+        """Limit vector magnitude"""
+        mag = np.linalg.norm(vector)
+        if mag > max_val:
+            return vector * (max_val / mag)
+        return vector
+    
+    def update(self, dt=0.1):
+        """Update all agents"""
+        self.update_neighbors()
+        
+        for agent in self.agents:
+            # Calculate steering forces
+            sep = self.separation(agent) * self.w_separation
+            ali = self.alignment(agent) * self.w_alignment
+            coh = self.cohesion(agent) * self.w_cohesion
+            form = self.formation_keeping(agent) * self.w_formation
+            avoid = self.obstacle_avoidance(agent)
+            
+            # Combine forces
+            acceleration = sep + ali + coh + form + avoid
+            acceleration = self.limit_vector(acceleration, self.max_force)
+            
+            # Update velocity and position
+            agent.velocity += acceleration * dt
+            agent.velocity = self.limit_vector(agent.velocity, self.max_speed)
+            agent.update(dt)
+    
+    def get_positions(self):
+        """Get all agent positions"""
+        return np.array([agent.position for agent in self.agents])
+    
+    def get_formation_error(self):
+        """Calculate total formation error"""
+        total_error = 0
+        for agent in self.agents:
+            error = np.linalg.norm(agent.position - agent.desired_position)
+            total_error += error
+        return total_error / len(self.agents)
+
+
+class SwarmSimulation:
+    """Simulate and visualize swarm behavior"""
+    
+    def __init__(self, controller, duration=30, dt=0.1):
+        self.controller = controller
+        self.duration = duration
+        self.dt = dt
+        self.history = []
+        
+    def run(self):
+        """Run simulation"""
+        steps = int(self.duration / self.dt)
+        
+        print(f"Running swarm simulation for {self.duration}s...")
+        
+        for step in range(steps):
+            self.controller.update(self.dt)
+            self.history.append(self.controller.get_positions().copy())
+            
+            if step % 50 == 0:
+                error = self.controller.get_formation_error()
+                print(f"Step {step}/{steps}, Formation Error: {error:.2f}")
+        
+        print("Simulation complete!")
+        
+    def animate(self):
+        """Animate swarm movement"""
+        fig = plt.figure(figsize=(12, 6))
+        
+        # 2D view
+        ax1 = fig.add_subplot(121)
+        ax1.set_xlim(0, self.controller.bounds)
+        ax1.set_ylim(0, self.controller.bounds)
+        ax1.set_xlabel('X')
+        ax1.set_ylabel('Y')
+        ax1.set_title('Swarm Top View')
+        ax1.grid(True, alpha=0.3)
+        
+        # Formation error plot
+        ax2 = fig.add_subplot(122)
+        ax2.set_xlabel('Time (s)')
+        ax2.set_ylabel('Formation Error')
+        ax2.set_title('Formation Error Over Time')
+        ax2.grid(True, alpha=0.3)
+        
+        scatter = ax1.scatter([], [], s=100, c='blue')
+        desired_scatter = ax1.scatter([], [], s=50, c='red', alpha=0.3, marker='x')
+        error_line, = ax2.plot([], [], 'r-')
+        
+        errors = []
+        times = []
+        
+        def init():
+            scatter.set_offsets(np.empty((0, 2)))
+            desired_scatter.set_offsets(np.empty((0, 2)))
+            error_line.set_data([], [])
+            return scatter, desired_scatter, error_line
+        
+        def update(frame):
+            if frame < len(self.history):
+                positions = self.history[frame]
+                scatter.set_offsets(positions[:, :2])
+                
+                desired = np.array([agent.desired_position[:2] 
+                                   for agent in self.controller.agents])
+                desired_scatter.set_offsets(desired)
+                
+                # Calculate and plot error
+                error = np.mean([np.linalg.norm(positions[i] - 
+                                               self.controller.agents[i].desired_position)
+                               for i in range(len(positions))])
+                errors.append(error)
+                times.append(frame * self.dt)
+                
+                error_line.set_data(times, errors)
+                ax2.relim()
+                ax2.autoscale_view()
+                
+            return scatter, desired_scatter, error_line
+        
+        anim = FuncAnimation(fig, update, init_func=init,
+                           frames=len(self.history), interval=50,
+                           blit=True, repeat=True)
+        
+        plt.tight_layout()
+        plt.show()
+
+
+# Example usage
+if __name__ == "__main__":
+    # Create swarm controller
+    swarm = SwarmController(num_agents=12, bounds=100)
+    
+    # Test different formations
+    formations = ['circle', 'line', 'grid', 'v', 'wedge']
+    
+    for formation in formations:
+        print(f"\n=== Testing {formation.upper()} formation ===")
+        
+        # Reset positions
+        for agent in swarm.agents:
+            agent.position = np.random.rand(3) * swarm.bounds
+            agent.velocity = (np.random.rand(3) - 0.5) * 2
+        
+        # Set formation
+        swarm.set_formation(formation, radius=25)
+        
+        # Run simulation
+        sim = SwarmSimulation(swarm, duration=20, dt=0.1)
+        sim.run()
+        
+        # Visualize
+        sim.animate()
