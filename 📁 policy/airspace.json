@@ -1,0 +1,18 @@
+{
+  "airspace_classes": [
+    {
+      "class": "Class B",
+      "name": "SFO Terminal Area",
+      "center": [37.6213, -122.3790],
+      "radius_meters": 15000,
+      "max_altitude_meters": 60
+    },
+    {
+      "class": "Restricted",
+      "name": "Military Test Range",
+      "center": [37.4000, -122.0500],
+      "radius_meters": 10000,
+      "restricted": true
+    }
+  ]
+}
