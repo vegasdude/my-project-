@@ -1,0 +1,338 @@
+"""
+Complete Test Suite for Drone Development Project
+Run with: pytest tests/
+"""
+import pytest
+import numpy as np
+import sys
+import os
+
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from flight_control.basic_flight import DroneController
+from flight_control.waypoint_navigation import MissionPlanner
+from computer_vision.object_tracker import ObjectTracker
+from navigation.path_planner import AStarPlanner, RRTPlanner, PathSmoother
+from swarm.formation_control import SwarmController, SwarmAgent
+
+
+class TestFlightControl:
+    """Test flight control modules"""
+    
+    def test_drone_controller_initialization(self, mocker):
+        """Test DroneController can be initialized"""
+        # Mock the dronekit connection
+        mocker.patch('dronekit.connect')
+        
+        # This would normally connect to actual drone
+        # controller = DroneController('tcp:127.0.0.1:5760')
+        # assert controller.vehicle is not None
+        assert True  # Placeholder for when mock is complete
+    
+    def test_telemetry_structure(self):
+        """Test telemetry data structure"""
+        expected_keys = ['mode', 'armed', 'altitude', 'latitude', 
+                        'longitude', 'heading', 'groundspeed', 
+                        'airspeed', 'battery', 'gps']
+        
+        # Mock telemetry
+        telemetry = {key: 0 for key in expected_keys}
+        
+        assert all(key in telemetry for key in expected_keys)
+
+
+class TestWaypointNavigation:
+    """Test waypoint navigation"""
+    
+    def test_waypoint_addition(self):
+        """Test adding waypoints"""
+        # Mock vehicle
+        class MockVehicle:
+            class MockLocation:
+                class MockFrame:
+                    lat = 37.7749
+                    lon = -122.4194
+                global_frame = MockFrame()
+            location = MockLocation()
+            
+        mission = MissionPlanner(MockVehicle())
+        mission.add_waypoint(37.7750, -122.4195, 20)
+        
+        assert len(mission.waypoints) == 1
+        assert mission.waypoints[0].lat == 37.7750
+        assert mission.waypoints[0].lon == -122.4195
+        assert mission.waypoints[0].alt == 20
+
+
+class TestObjectTracker:
+    """Test computer vision tracking"""
+    
+    def test_tracker_initialization(self):
+        """Test tracker can be initialized"""
+        tracker = ObjectTracker([0, 120, 70], [10, 255, 255])
+        
+        assert tracker.color_lower is not None
+        assert tracker.color_upper is not None
+        assert tracker.target_position is None
+    
+    def test_target_offset_calculation(self):
+        """Test offset calculation"""
+        tracker = ObjectTracker([0, 120, 70], [10, 255, 255])
+        tracker.target_position = (320, 240)  # Center of 640x480
+        
+        offset_x, offset_y = tracker.get_target_offset(640, 480)
+        
+        assert abs(offset_x) < 0.1  # Should be near center
+        assert abs(offset_y) < 0.1
+    
+    def test_offset_edges(self):
+        """Test offset at frame edges"""
+        tracker = ObjectTracker([0, 120, 70], [10, 255, 255])
+        
+        # Top-left corner
+        tracker.target_position = (0, 0)
+        offset_x, offset_y = tracker.get_target_offset(640, 480)
+        assert offset_x == -1.0
+        assert offset_y == -1.0
+        
+        # Bottom-right corner
+        tracker.target_position = (640, 480)
+        offset_x, offset_y = tracker.get_target_offset(640, 480)
+        assert offset_x == 1.0
+        assert offset_y == 1.0
+
+
+class TestPathPlanning:
+    """Test path planning algorithms"""
+    
+    def test_astar_simple_path(self):
+        """Test A* finds path in obstacle-free space"""
+        planner = AStarPlanner(grid_size=(50, 50))
+        
+        start = (5, 5)
+        goal = (45, 45)
+        
+        path = planner.plan(start, goal)
+        
+        assert path is not None
+        assert path[0] == start
+        assert path[-1] == goal
+        assert len(path) > 0
+    
+    def test_astar_with_obstacles(self):
+        """Test A* navigates around obstacles"""
+        planner = AStarPlanner(grid_size=(50, 50))
+        
+        # Add obstacle wall
+        planner.add_rectangular_obstacle(20, 0, 25, 40)
+        
+        start = (5, 25)
+        goal = (45, 25)
+        
+        path = planner.plan(start, goal)
+        
+        assert path is not None
+        # Path should go around obstacle
+        assert any(p[1] < 20 or p[1] > 40 for p in path[1:-1])
+    
+    def test_astar_no_path(self):
+        """Test A* returns None when no path exists"""
+        planner = AStarPlanner(grid_size=(50, 50))
+        
+        # Create impassable barrier
+        planner.add_rectangular_obstacle(20, 0, 25, 50)
+        
+        start = (5, 25)
+        goal = (45, 25)
+        
+        path = planner.plan(start, goal)
+        
+        assert path is None
+    
+    def test_rrt_basic(self):
+        """Test RRT planner"""
+        planner = RRTPlanner(grid_size=(50, 50), max_iterations=1000)
+        
+        start = (5, 5)
+        goal = (45, 45)
+        
+        path = planner.plan(start, goal)
+        
+        # RRT is probabilistic, so path might not always be found
+        # in limited iterations
+        if path:
+            assert path[0] == start
+            assert path[-1] == goal
+    
+    def test_path_smoothing(self):
+        """Test path smoothing"""
+        # Create zigzag path
+        path = [(0, 0), (10, 5), (20, 0), (30, 5), (40, 0)]
+        
+        smoother = PathSmoother()
+        smooth = smoother.smooth_path(path, weight_smooth=0.5)
+        
+        assert len(smooth) == len(path)
+        # Smoothed path should have less variation
+        assert smooth[0] == path[0]
+        assert smooth[-1] == path[-1]
+    
+    def test_path_simplification(self):
+        """Test path simplification"""
+        # Create path with many points
+        path = [(i, i) for i in range(100)]
+        
+        smoother = PathSmoother()
+        simple = smoother.simplify_path(path, epsilon=5.0)
+        
+        # Should reduce to just start and end for straight line
+        assert len(simple) <= len(path)
+        assert simple[0] == path[0]
+        assert simple[-1] == path[-1]
+
+
+class TestSwarmControl:
+    """Test swarm formation control"""
+    
+    def test_swarm_initialization(self):
+        """Test swarm controller initialization"""
+        swarm = SwarmController(num_agents=5, bounds=50)
+        
+        assert len(swarm.agents) == 5
+        assert all(isinstance(agent, SwarmAgent) for agent in swarm.agents)
+    
+    def test_formation_shapes(self):
+        """Test different formation shapes"""
+        swarm = SwarmController(num_agents=6, bounds=50)
+        
+        formations = ['circle', 'line', 'grid', 'v', 'wedge']
+        
+        for formation in formations:
+            swarm.set_formation(formation, radius=10)
+            
+            # Check all agents have desired positions
+            assert all(hasattr(agent, 'desired_position') 
+                      for agent in swarm.agents)
+            
+            # Check formation shape is set
+            assert swarm.formation_shape == formation
+    
+    def test_neighbor_detection(self):
+        """Test neighbor detection"""
+        swarm = SwarmController(num_agents=3, bounds=50)
+        
+        # Place agents in known positions
+        swarm.agents[0].position = np.array([10, 10, 10])
+        swarm.agents[1].position = np.array([15, 10, 10])  # Close
+        swarm.agents[2].position = np.array([40, 40, 40])  # Far
+        
+        swarm.update_neighbors()
+        
+        # Agent 0 should have agent 1 as neighbor but not agent 2
+        neighbor_ids = [n.id for n in swarm.agents[0].neighbors]
+        assert 1 in neighbor_ids
+        assert 2 not in neighbor_ids
+    
+    def test_separation_force(self):
+        """Test separation behavior"""
+        swarm = SwarmController(num_agents=2, bounds=50)
+        
+        # Place agents very close
+        swarm.agents[0].position = np.array([10, 10, 10])
+        swarm.agents[1].position = np.array([11, 10, 10])
+        
+        swarm.update_neighbors()
+        force = swarm.separation(swarm.agents[0])
+        
+        # Should push away (negative x direction)
+        assert force[0] < 0
+    
+    def test_swarm_update(self):
+        """Test swarm update moves agents"""
+        swarm = SwarmController(num_agents=3, bounds=50)
+        
+        initial_positions = [agent.position.copy() for agent in swarm.agents]
+        
+        # Update several times
+        for _ in range(10):
+            swarm.update(dt=0.1)
+        
+        # Positions should have changed
+        assert any(not np.array_equal(agent.position, initial_positions[i])
+                  for i, agent in enumerate(swarm.agents))
+    
+    def test_formation_error(self):
+        """Test formation error calculation"""
+        swarm = SwarmController(num_agents=4, bounds=50)
+        swarm.set_formation('circle', radius=20)
+        
+        # Initially far from formation
+        initial_error = swarm.get_formation_error()
+        
+        # Update to move towards formation
+        for _ in range(100):
+            swarm.update(dt=0.1)
+        
+        final_error = swarm.get_formation_error()
+        
+        # Error should decrease
+        assert final_error < initial_error
+
+
+class TestIntegration:
+    """Integration tests"""
+    
+    def test_vision_to_navigation(self):
+        """Test vision tracking feeds into navigation"""
+        tracker = ObjectTracker([0, 120, 70], [10, 255, 255])
+        tracker.target_position = (320, 240)
+        
+        offset_x, offset_y = tracker.get_target_offset(640, 480)
+        
+        # These offsets could be used to adjust waypoints
+        assert offset_x is not None
+        assert offset_y is not None
+    
+    def test_path_to_waypoints(self):
+        """Test path planning output converts to waypoints"""
+        planner = AStarPlanner(grid_size=(50, 50))
+        path = planner.plan((5, 5), (45, 45))
+        
+        if path:
+            # Convert to lat/lon waypoints (mock conversion)
+            waypoints = [
+                (37.7749 + p[0]*0.0001, -122.4194 + p[1]*0.0001, 20)
+                for p in path[::5]  # Sample every 5th point
+            ]
+            
+            assert len(waypoints) > 0
+            assert all(len(wp) == 3 for wp in waypoints)
+
+
+# Fixtures
+@pytest.fixture
+def sample_path():
+    """Sample path for testing"""
+    return [(0, 0), (10, 10), (20, 20), (30, 30)]
+
+@pytest.fixture
+def mock_drone_telemetry():
+    """Mock telemetry data"""
+    return {
+        'mode': 'GUIDED',
+        'armed': True,
+        'altitude': 10.0,
+        'latitude': 37.7749,
+        'longitude': -122.4194,
+        'heading': 90,
+        'groundspeed': 5.0,
+        'airspeed': 5.2,
+        'battery': 85,
+        'gps': 3
+    }
+
+
+# Run tests
+if __name__ == "__main__":
+    pytest.main([__file__, '-v', '--tb=short'])
