@@ -1,0 +1,365 @@
+"""
+MAVLink Communication Handler
+Low-level MAVLink protocol handling and custom commands
+"""
+from pymavlink import mavutil
+import time
+import threading
+from queue import Queue
+
+class MAVLinkHandler:
+    """Handle MAVLink communication protocol"""
+    
+    def __init__(self, connection_string='udp:127.0.0.1:14550', baudrate=57600):
+        """
+        Initialize MAVLink connection
+        
+        Args:
+            connection_string: Connection string (UDP, TCP, Serial)
+            baudrate: Baud rate for serial connections
+        """
+        print(f"Connecting to {connection_string}...")
+        self.master = mavutil.mavlink_connection(connection_string, baud=baudrate)
+        
+        # Wait for heartbeat
+        print("Waiting for heartbeat...")
+        self.master.wait_heartbeat()
+        print(f"Heartbeat from system {self.master.target_system}, "
+              f"component {self.master.target_component}")
+        
+        self.message_queue = Queue()
+        self.running = False
+        self.listener_thread = None
+        
+    def request_data_stream(self, stream_id=mavutil.mavlink.MAV_DATA_STREAM_ALL, rate=10):
+        """
+        Request data stream from vehicle
+        
+        Args:
+            stream_id: MAVLink stream ID
+            rate: Update rate in Hz
+        """
+        self.master.mav.request_data_stream_send(
+            self.master.target_system,
+            self.master.target_component,
+            stream_id,
+            rate,
+            1  # Start streaming
+        )
+        print(f"Requested data stream {stream_id} at {rate}Hz")
+        
+    def arm_disarm(self, arm=True):
+        """
+        Arm or disarm vehicle
+        
+        Args:
+            arm: True to arm, False to disarm
+        """
+        self.master.mav.command_long_send(
+            self.master.target_system,
+            self.master.target_component,
+            mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+            0,
+            1 if arm else 0,  # Arm/disarm
+            0, 0, 0, 0, 0, 0
+        )
+        print(f"{'Arming' if arm else 'Disarming'} vehicle...")
+        
+    def set_mode(self, mode_name):
+        """
+        Set vehicle flight mode
+        
+        Args:
+            mode_name: Mode name (e.g., 'GUIDED', 'AUTO', 'RTL')
+        """
+        # Get mode ID
+        mode_id = self.master.mode_mapping().get(mode_name)
+        
+        if mode_id is None:
+            print(f"Unknown mode: {mode_name}")
+            return False
+        
+        self.master.mav.set_mode_send(
+            self.master.target_system,
+            mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+            mode_id
+        )
+        print(f"Setting mode to {mode_name}")
+        return True
+        
+    def takeoff(self, altitude):
+        """
+        Send takeoff command
+        
+        Args:
+            altitude: Target altitude in meters
+        """
+        self.master.mav.command_long_send(
+            self.master.target_system,
+            self.master.target_component,
+            mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+            0,
+            0, 0, 0, 0, 0, 0,
+            altitude
+        )
+        print(f"Takeoff to {altitude}m")
+        
+    def goto_position(self, lat, lon, alt):
+        """
+        Send goto position command
+        
+        Args:
+            lat: Latitude in degrees
+            lon: Longitude in degrees
+            alt: Altitude in meters
+        """
+        self.master.mav.mission_item_send(
+            self.master.target_system,
+            self.master.target_component,
+            0,
+            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+            mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+            2, 0, 0, 0, 0, 0,
+            lat, lon, alt
+        )
+        print(f"Going to: {lat}, {lon}, {alt}m")
+        
+    def send_velocity(self, vx, vy, vz, yaw_rate=0):
+        """
+        Send velocity command in body frame
+        
+        Args:
+            vx: Velocity forward (m/s)
+            vy: Velocity right (m/s)
+            vz: Velocity down (m/s)
+            yaw_rate: Yaw rate (deg/s)
+        """
+        self.master.mav.set_position_target_local_ned_send(
+            0,
+            self.master.target_system,
+            self.master.target_component,
+            mavutil.mavlink.MAV_FRAME_BODY_OFFSET_NED,
+            0b0000111111000111,  # Velocity only
+            0, 0, 0,
+            vx, vy, vz,
+            0, 0, 0,
+            0, yaw_rate
+        )
+        
+    def send_rc_override(self, channels):
+        """
+        Override RC channels
+        
+        Args:
+            channels: List of 8 channel values (1000-2000, 65535 for no change)
+        """
+        self.master.mav.rc_channels_override_send(
+            self.master.target_system,
+            self.master.target_component,
+            *channels
+        )
+        
+    def get_message(self, msg_type, timeout=5):
+        """
+        Wait for specific message type
+        
+        Args:
+            msg_type: Message type name (e.g., 'ATTITUDE', 'GPS_RAW_INT')
+            timeout: Timeout in seconds
+            
+        Returns:
+            Message object or None
+        """
+        return self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
+        
+    def start_message_listener(self):
+        """Start background thread to listen for messages"""
+        self.running = True
+        self.listener_thread = threading.Thread(target=self._message_listener)
+        self.listener_thread.daemon = True
+        self.listener_thread.start()
+        print("Message listener started")
+        
+    def _message_listener(self):
+        """Background message listener"""
+        while self.running:
+            msg = self.master.recv_match(blocking=True, timeout=1)
+            if msg:
+                self.message_queue.put(msg)
+                
+    def stop_message_listener(self):
+        """Stop message listener thread"""
+        self.running = False
+        if self.listener_thread:
+            self.listener_thread.join()
+        print("Message listener stopped")
+        
+    def get_telemetry(self):
+        """
+        Get current telemetry snapshot
+        
+        Returns:
+            Dictionary with telemetry data
+        """
+        telemetry = {}
+        
+        # Get attitude
+        msg = self.get_message('ATTITUDE', timeout=1)
+        if msg:
+            telemetry['roll'] = msg.roll
+            telemetry['pitch'] = msg.pitch
+            telemetry['yaw'] = msg.yaw
+            
+        # Get GPS
+        msg = self.get_message('GPS_RAW_INT', timeout=1)
+        if msg:
+            telemetry['lat'] = msg.lat / 1e7
+            telemetry['lon'] = msg.lon / 1e7
+            telemetry['alt'] = msg.alt / 1000.0
+            telemetry['gps_fix'] = msg.fix_type
+            
+        # Get battery
+        msg = self.get_message('SYS_STATUS', timeout=1)
+        if msg:
+            telemetry['battery_voltage'] = msg.voltage_battery / 1000.0
+            telemetry['battery_current'] = msg.current_battery / 100.0
+            telemetry['battery_remaining'] = msg.battery_remaining
+            
+        # Get VFR HUD
+        msg = self.get_message('VFR_HUD', timeout=1)
+        if msg:
+            telemetry['airspeed'] = msg.airspeed
+            telemetry['groundspeed'] = msg.groundspeed
+            telemetry['heading'] = msg.heading
+            telemetry['throttle'] = msg.throttle
+            telemetry['alt_msl'] = msg.alt
+            telemetry['climb'] = msg.climb
+            
+        return telemetry
+
+
+class MAVLinkMessageLogger:
+    """Log all MAVLink messages to file"""
+    
+    def __init__(self, handler, log_file='mavlink_messages.log'):
+        self.handler = handler
+        self.log_file = log_file
+        self.file = None
+        self.logging = False
+        
+    def start(self):
+        """Start logging"""
+        self.file = open(self.log_file, 'w')
+        self.logging = True
+        print(f"MAVLink logging started: {self.log_file}")
+        
+        # Start listener
+        self.handler.start_message_listener()
+        
+        # Log messages
+        while self.logging:
+            try:
+                msg = self.handler.message_queue.get(timeout=1)
+                timestamp = time.time()
+                self.file.write(f"{timestamp},{msg.get_type()},{msg}\n")
+                self.file.flush()
+            except:
+                pass
+                
+    def stop(self):
+        """Stop logging"""
+        self.logging = False
+        if self.file:
+            self.file.close()
+        self.handler.stop_message_listener()
+        print("MAVLink logging stopped")
+
+
+class MAVLinkStreamReader:
+    """Read and decode MAVLink message streams"""
+    
+    def __init__(self, handler):
+        self.handler = handler
+        self.callbacks = {}
+        
+    def register_callback(self, msg_type, callback):
+        """
+        Register callback for message type
+        
+        Args:
+            msg_type: Message type name
+            callback: Function to call when message received
+        """
+        self.callbacks[msg_type] = callback
+        print(f"Registered callback for {msg_type}")
+        
+    def process_stream(self):
+        """Process message stream and call callbacks"""
+        self.handler.start_message_listener()
+        
+        try:
+            while True:
+                msg = self.handler.message_queue.get(timeout=1)
+                msg_type = msg.get_type()
+                
+                if msg_type in self.callbacks:
+                    self.callbacks[msg_type](msg)
+                    
+        except KeyboardInterrupt:
+            print("\nStream processing stopped")
+        finally:
+            self.handler.stop_message_listener()
+
+
+# Example usage
+if __name__ == "__main__":
+    # Connect to vehicle
+    handler = MAVLinkHandler('udp:127.0.0.1:14550')
+    
+    # Request data streams
+    handler.request_data_stream(mavutil.mavlink.MAV_DATA_STREAM_ALL, 10)
+    
+    # Example: Print telemetry
+    print("\n=== Reading Telemetry ===")
+    for i in range(10):
+        telemetry = handler.get_telemetry()
+        print(f"\nTelemetry update {i+1}:")
+        for key, value in telemetry.items():
+            print(f"  {key}: {value}")
+        time.sleep(1)
+    
+    # Example: Arm and takeoff
+    print("\n=== Arm and Takeoff Example ===")
+    
+    # Set mode to GUIDED
+    handler.set_mode('GUIDED')
+    time.sleep(1)
+    
+    # Arm
+    handler.arm_disarm(arm=True)
+    time.sleep(2)
+    
+    # Takeoff to 10m
+    handler.takeoff(10)
+    time.sleep(5)
+    
+    # Send velocity command
+    print("Sending velocity command...")
+    for i in range(20):
+        handler.send_velocity(1, 0, 0)  # Move forward
+        time.sleep(0.5)
+    
+    # Return to launch
+    print("Returning to launch...")
+    handler.set_mode('RTL')
+    
+    # Monitor until landed
+    while True:
+        msg = handler.get_message('VFR_HUD', timeout=1)
+        if msg:
+            print(f"Altitude: {msg.alt:.1f}m")
+            if msg.alt < 1:
+                break
+        time.sleep(1)
+    
+    print("Example complete!")
