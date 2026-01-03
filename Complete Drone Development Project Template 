@@ -1,0 +1,569 @@
+# Complete Drone Development Project Template
+
+## Project Structure
+
+```
+drone-development/
+├── README.md
+├── requirements.txt
+├── setup.sh
+├── .gitignore
+├── config/
+│   ├── drone_config.yaml
+│   ├── mission_params.json
+│   └── pid_tuning.yaml
+├── src/
+│   ├── __init__.py
+│   ├── flight_control/
+│   │   ├── __init__.py
+│   │   ├── basic_flight.py
+│   │   ├── waypoint_navigation.py
+│   │   ├── mission_planner.py
+│   │   └── telemetry_logger.py
+│   ├── computer_vision/
+│   │   ├── __init__.py
+│   │   ├── object_tracker.py
+│   │   ├── yolo_detector.py
+│   │   └── stream_processor.py
+│   ├── communication/
+│   │   ├── __init__.py
+│   │   ├── mavlink_handler.py
+│   │   ├── msp_handler.py
+│   │   └── telemetry_stream.py
+│   ├── navigation/
+│   │   ├── __init__.py
+│   │   ├── path_planner.py
+│   │   ├── obstacle_avoidance.py
+│   │   └── gps_navigation.py
+│   └── swarm/
+│       ├── __init__.py
+│       ├── formation_control.py
+│       └── multi_agent_coordinator.py
+├── tests/
+│   ├── __init__.py
+│   ├── test_flight_control.py
+│   ├── test_vision.py
+│   └── test_navigation.py
+├── simulations/
+│   ├── sitl_launch.sh
+│   ├── gazebo_worlds/
+│   │   └── test_environment.world
+│   └── test_missions/
+│       └── basic_mission.txt
+├── hardware/
+│   ├── wiring_diagrams/
+│   ├── part_list.md
+│   └── calibration_scripts/
+├── docs/
+│   ├── setup_guide.md
+│   ├── api_reference.md
+│   └── troubleshooting.md
+└── examples/
+    ├── basic_takeoff.py
+    ├── waypoint_mission.py
+    ├── opencv_tracking.py
+    └── swarm_demo.py
+```
+
+---
+
+## File Contents
+
+### README.md
+```markdown
+# Drone Development Project
+
+Complete development environment for autonomous drone systems.
+
+## Features
+- Flight control (ArduPilot/PX4)
+- Computer vision integration
+- Autonomous navigation
+- Swarm coordination
+- Real-time telemetry
+
+## Quick Start
+```bash
+./setup.sh
+source venv/bin/activate
+python examples/basic_takeoff.py
+```
+
+## Documentation
+See `/docs` folder for detailed guides.
+```
+
+---
+
+### requirements.txt
+```
+dronekit==2.9.2
+dronekit-sitl==3.3.0
+pymavlink==2.4.37
+MAVProxy==1.8.62
+opencv-python==4.8.1.78
+numpy==1.24.3
+ultralytics==8.0.196
+pyserial==3.5
+pyyaml==6.0.1
+matplotlib==3.7.2
+scipy==1.11.2
+```
+
+---
+
+### setup.sh
+```bash
+#!/bin/bash
+
+echo "Setting up Drone Development Environment..."
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Upgrade pip
+pip install --upgrade pip
+
+# Install requirements
+pip install -r requirements.txt
+
+# Create necessary directories
+mkdir -p logs
+mkdir -p data/telemetry
+mkdir -p data/video
+mkdir -p missions
+
+# Test installation
+echo "Testing DroneKit installation..."
+python -c "import dronekit; print('DroneKit version:', dronekit.__version__)"
+
+echo "Setup complete! Run 'source venv/bin/activate' to activate environment."
+```
+
+---
+
+### config/drone_config.yaml
+```yaml
+drone:
+  connection: "127.0.0.1:14550"
+  vehicle_type: "copter"
+  baudrate: 57600
+  
+flight:
+  max_altitude: 100  # meters
+  default_speed: 5   # m/s
+  rtl_altitude: 20   # meters
+  
+safety:
+  geofence_enabled: true
+  geofence_radius: 500  # meters
+  battery_failsafe: 20  # percent
+  
+telemetry:
+  log_enabled: true
+  log_path: "./logs"
+  update_rate: 10  # Hz
+```
+
+---
+
+### src/flight_control/basic_flight.py
+```python
+"""
+Basic flight control module
+"""
+from dronekit import connect, VehicleMode, LocationGlobalRelative
+import time
+import yaml
+
+class DroneController:
+    def __init__(self, connection_string, config_path='config/drone_config.yaml'):
+        """Initialize drone controller"""
+        with open(config_path, 'r') as f:
+            self.config = yaml.safe_load(f)
+        
+        print(f"Connecting to drone at {connection_string}...")
+        self.vehicle = connect(connection_string, wait_ready=True)
+        print("Connected!")
+        
+    def arm_and_takeoff(self, target_altitude):
+        """Arm and takeoff to target altitude"""
+        print("Pre-flight checks...")
+        
+        # Check if vehicle is armable
+        while not self.vehicle.is_armable:
+            print("Waiting for vehicle to initialize...")
+            time.sleep(1)
+        
+        print("Arming motors...")
+        self.vehicle.mode = VehicleMode("GUIDED")
+        self.vehicle.armed = True
+        
+        while not self.vehicle.armed:
+            print("Waiting for arming...")
+            time.sleep(1)
+        
+        print(f"Taking off to {target_altitude}m...")
+        self.vehicle.simple_takeoff(target_altitude)
+        
+        # Wait to reach target altitude
+        while True:
+            current_alt = self.vehicle.location.global_relative_frame.alt
+            print(f"Altitude: {current_alt:.1f}m")
+            
+            if current_alt >= target_altitude * 0.95:
+                print("Target altitude reached!")
+                break
+            time.sleep(1)
+    
+    def goto_position(self, lat, lon, alt):
+        """Navigate to GPS coordinates"""
+        point = LocationGlobalRelative(lat, lon, alt)
+        print(f"Going to: {lat}, {lon}, {alt}m")
+        self.vehicle.simple_goto(point)
+    
+    def return_to_launch(self):
+        """Return to launch position and land"""
+        print("Returning to launch...")
+        self.vehicle.mode = VehicleMode("RTL")
+    
+    def land(self):
+        """Land at current position"""
+        print("Landing...")
+        self.vehicle.mode = VehicleMode("LAND")
+    
+    def get_telemetry(self):
+        """Get current telemetry data"""
+        return {
+            'mode': self.vehicle.mode.name,
+            'armed': self.vehicle.armed,
+            'altitude': self.vehicle.location.global_relative_frame.alt,
+            'latitude': self.vehicle.location.global_frame.lat,
+            'longitude': self.vehicle.location.global_frame.lon,
+            'heading': self.vehicle.heading,
+            'groundspeed': self.vehicle.groundspeed,
+            'airspeed': self.vehicle.airspeed,
+            'battery': self.vehicle.battery.level,
+            'gps': self.vehicle.gps_0.fix_type
+        }
+    
+    def close(self):
+        """Close vehicle connection"""
+        self.vehicle.close()
+        print("Connection closed.")
+
+if __name__ == "__main__":
+    # Test basic flight
+    drone = DroneController('127.0.0.1:14550')
+    
+    try:
+        drone.arm_and_takeoff(10)
+        time.sleep(10)
+        drone.return_to_launch()
+        
+        # Wait for landing
+        while drone.vehicle.armed:
+            time.sleep(1)
+    finally:
+        drone.close()
+```
+
+---
+
+### src/flight_control/waypoint_navigation.py
+```python
+"""
+Waypoint navigation and mission planning
+"""
+from dronekit import connect, VehicleMode, LocationGlobalRelative, Command
+from pymavlink import mavutil
+import time
+
+class MissionPlanner:
+    def __init__(self, vehicle):
+        self.vehicle = vehicle
+        self.waypoints = []
+    
+    def add_waypoint(self, lat, lon, alt):
+        """Add a waypoint to the mission"""
+        self.waypoints.append(LocationGlobalRelative(lat, lon, alt))
+        print(f"Added waypoint: {lat}, {lon}, {alt}m")
+    
+    def upload_mission(self):
+        """Upload mission to vehicle"""
+        cmds = self.vehicle.commands
+        cmds.clear()
+        
+        # Add takeoff command
+        home = self.vehicle.location.global_frame
+        cmds.add(Command(0, 0, 0, 
+                        mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                        mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+                        0, 0, 0, 0, 0, 0,
+                        home.lat, home.lon, 10))
+        
+        # Add waypoints
+        for wp in self.waypoints:
+            cmds.add(Command(0, 0, 0,
+                           mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                           mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                           0, 0, 0, 0, 0, 0,
+                           wp.lat, wp.lon, wp.alt))
+        
+        # Add RTL
+        cmds.add(Command(0, 0, 0,
+                        mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                        mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0))
+        
+        print(f"Uploading {len(cmds)} commands...")
+        cmds.upload()
+        print("Mission uploaded!")
+    
+    def execute_mission(self):
+        """Execute uploaded mission"""
+        print("Arming and starting mission...")
+        self.vehicle.mode = VehicleMode("GUIDED")
+        self.vehicle.armed = True
+        
+        while not self.vehicle.armed:
+            time.sleep(1)
+        
+        print("Switching to AUTO mode...")
+        self.vehicle.mode = VehicleMode("AUTO")
+        
+        # Monitor mission progress
+        while self.vehicle.commands.next < self.vehicle.commands.count:
+            nextwaypoint = self.vehicle.commands.next
+            print(f"Going to waypoint {nextwaypoint}...")
+            time.sleep(5)
+        
+        print("Mission complete!")
+
+# Example usage
+if __name__ == "__main__":
+    vehicle = connect('127.0.0.1:14550', wait_ready=True)
+    
+    mission = MissionPlanner(vehicle)
+    mission.add_waypoint(37.7749, -122.4194, 20)
+    mission.add_waypoint(37.7750, -122.4195, 20)
+    mission.add_waypoint(37.7751, -122.4196, 20)
+    mission.upload_mission()
+    mission.execute_mission()
+    
+    vehicle.close()
+```
+
+---
+
+### src/computer_vision/object_tracker.py
+```python
+"""
+Real-time object tracking using OpenCV
+"""
+import cv2
+import numpy as np
+
+class ObjectTracker:
+    def __init__(self, color_lower, color_upper):
+        """Initialize tracker with HSV color range"""
+        self.color_lower = np.array(color_lower)
+        self.color_upper = np.array(color_upper)
+        self.target_position = None
+    
+    def process_frame(self, frame):
+        """Process video frame and detect target"""
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, self.color_lower, self.color_upper)
+        
+        # Find contours
+        contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        
+        if contours:
+            # Find largest contour
+            largest_contour = max(contours, key=cv2.contourArea)
+            
+            # Calculate center
+            M = cv2.moments(largest_contour)
+            if M["m00"] != 0:
+                cx = int(M["m10"] / M["m00"])
+                cy = int(M["m01"] / M["m00"])
+                self.target_position = (cx, cy)
+                
+                # Draw on frame
+                cv2.circle(frame, (cx, cy), 10, (0, 255, 0), -1)
+                cv2.drawContours(frame, [largest_contour], -1, (0, 255, 0), 2)
+        
+        return frame, mask
+    
+    def get_target_offset(self, frame_width, frame_height):
+        """Calculate offset from center"""
+        if self.target_position:
+            cx, cy = self.target_position
+            offset_x = (cx - frame_width / 2) / (frame_width / 2)
+            offset_y = (cy - frame_height / 2) / (frame_height / 2)
+            return offset_x, offset_y
+        return None, None
+
+# Example usage
+if __name__ == "__main__":
+    # Track red objects
+    tracker = ObjectTracker([0, 120, 70], [10, 255, 255])
+    
+    cap = cv2.VideoCapture(0)
+    
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        processed_frame, mask = tracker.process_frame(frame)
+        offset_x, offset_y = tracker.get_target_offset(frame.shape[1], frame.shape[0])
+        
+        if offset_x is not None:
+            print(f"Target offset: X={offset_x:.2f}, Y={offset_y:.2f}")
+        
+        cv2.imshow('Tracking', processed_frame)
+        cv2.imshow('Mask', mask)
+        
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    
+    cap.release()
+    cv2.destroyAllWindows()
+```
+
+---
+
+### examples/basic_takeoff.py
+```python
+"""
+Simple takeoff and land example
+"""
+import sys
+sys.path.append('./src')
+
+from flight_control.basic_flight import DroneController
+import time
+
+def main():
+    # Connect to drone (SITL simulator)
+    drone = DroneController('127.0.0.1:14550')
+    
+    try:
+        # Print telemetry
+        telemetry = drone.get_telemetry()
+        print("Current telemetry:")
+        for key, value in telemetry.items():
+            print(f"  {key}: {value}")
+        
+        # Takeoff to 10 meters
+        drone.arm_and_takeoff(10)
+        
+        # Hover for 10 seconds
+        print("Hovering...")
+        time.sleep(10)
+        
+        # Return to launch and land
+        drone.return_to_launch()
+        
+        # Wait for landing
+        print("Waiting for landing...")
+        while drone.vehicle.armed:
+            alt = drone.vehicle.location.global_relative_frame.alt
+            print(f"Altitude: {alt:.1f}m")
+            time.sleep(1)
+        
+        print("Landed successfully!")
+        
+    except KeyboardInterrupt:
+        print("Interrupted! Landing...")
+        drone.land()
+    finally:
+        drone.close()
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+### .gitignore
+```
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Logs
+logs/
+*.log
+
+# Data
+data/
+*.bag
+*.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+```
+
+---
+
+## Installation Instructions
+
+1. **Clone or create project directory:**
+```bash
+mkdir drone-development
+cd drone-development
+```
+
+2. **Copy all files** to the directory structure shown above
+
+3. **Run setup:**
+```bash
+chmod +x setup.sh
+./setup.sh
+source venv/bin/activate
+```
+
+4. **Start SITL simulator:**
+```bash
+dronekit-sitl copter --home=37.7749,-122.4194,0,0
+```
+
+5. **Run example (in new terminal):**
+```bash
+source venv/bin/activate
+python examples/basic_takeoff.py
+```
+
+## Next Steps
+
+- Review `/docs` for detailed guides
+- Modify `config/drone_config.yaml` for your setup
+- Test examples in `/examples`
+- Build custom missions in `/src`
+- Add your own modules
+
+## Resources
+
+- ArduPilot: https://ardupilot.org
+- DroneKit: https://dronekit.io
+- PX4: https://docs.px4.io
+
+---
+
+**Ready to fly! 🚁**
