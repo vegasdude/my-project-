@@ -1,0 +1,10 @@
+{
+  "flight_id": "FP-001",
+  "max_altitude": 95,
+  "max_speed": 12,
+  "path": [
+    [37.6220, -122.3800],
+    [37.6231, -122.3815]
+  ],
+  "logging_enabled": true
+}
