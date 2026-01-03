@@ -1,0 +1,14 @@
+[
+  {
+    "version": 1,
+    "timestamp": "2026-01-02T10:15:00Z",
+    "author": "admin",
+    "changes": "Initial rule set created"
+  },
+  {
+    "version": 2,
+    "timestamp": "2026-01-03T02:45:00Z",
+    "author": "policy_board",
+    "changes": "Enabled logging requirement"
+  }
+]
