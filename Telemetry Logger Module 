@@ -1,0 +1,341 @@
+"""
+Telemetry Logger Module
+Real-time logging and visualization of drone telemetry
+"""
+import csv
+import json
+import time
+from datetime import datetime
+from pathlib import Path
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+import numpy as np
+from collections import deque
+
+class TelemetryLogger:
+    """Log and save drone telemetry data"""
+    
+    def __init__(self, log_dir='logs', buffer_size=1000):
+        self.log_dir = Path(log_dir)
+        self.log_dir.mkdir(exist_ok=True)
+        
+        self.buffer_size = buffer_size
+        self.data_buffer = deque(maxlen=buffer_size)
+        
+        # Create timestamped log file
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        self.csv_path = self.log_dir / f'telemetry_{timestamp}.csv'
+        self.json_path = self.log_dir / f'telemetry_{timestamp}.json'
+        
+        self.csv_file = None
+        self.csv_writer = None
+        self.headers = None
+        
+    def start(self):
+        """Start logging session"""
+        self.csv_file = open(self.csv_path, 'w', newline='')
+        print(f"Logging started: {self.csv_path}")
+        
+    def log(self, telemetry_data):
+        """
+        Log telemetry data point
+        
+        Args:
+            telemetry_data: Dictionary with telemetry fields
+        """
+        # Add timestamp
+        telemetry_data['timestamp'] = time.time()
+        telemetry_data['datetime'] = datetime.now().isoformat()
+        
+        # Initialize CSV writer with headers on first log
+        if self.csv_writer is None:
+            self.headers = list(telemetry_data.keys())
+            self.csv_writer = csv.DictWriter(self.csv_file, fieldnames=self.headers)
+            self.csv_writer.writeheader()
+        
+        # Write to CSV
+        self.csv_writer.writerow(telemetry_data)
+        self.csv_file.flush()
+        
+        # Add to buffer
+        self.data_buffer.append(telemetry_data.copy())
+        
+    def get_recent_data(self, num_points=100):
+        """Get recent telemetry data"""
+        return list(self.data_buffer)[-num_points:]
+    
+    def save_json(self):
+        """Save complete log as JSON"""
+        with open(self.json_path, 'w') as f:
+            json.dump(list(self.data_buffer), f, indent=2)
+        print(f"JSON log saved: {self.json_path}")
+        
+    def stop(self):
+        """Stop logging and save"""
+        if self.csv_file:
+            self.csv_file.close()
+            print(f"CSV log saved: {self.csv_path}")
+        
+        self.save_json()
+        print("Logging stopped")
+        
+    def analyze(self):
+        """Generate analysis report"""
+        if not self.data_buffer:
+            print("No data to analyze")
+            return
+        
+        data = list(self.data_buffer)
+        
+        print("\n=== Flight Analysis ===")
+        print(f"Total data points: {len(data)}")
+        
+        if 'altitude' in data[0]:
+            altitudes = [d['altitude'] for d in data if 'altitude' in d]
+            print(f"Altitude - Min: {min(altitudes):.2f}m, "
+                  f"Max: {max(altitudes):.2f}m, "
+                  f"Avg: {np.mean(altitudes):.2f}m")
+        
+        if 'groundspeed' in data[0]:
+            speeds = [d['groundspeed'] for d in data if 'groundspeed' in d]
+            print(f"Speed - Min: {min(speeds):.2f}m/s, "
+                  f"Max: {max(speeds):.2f}m/s, "
+                  f"Avg: {np.mean(speeds):.2f}m/s")
+        
+        if 'battery' in data[0]:
+            battery_start = data[0]['battery']
+            battery_end = data[-1]['battery']
+            print(f"Battery - Start: {battery_start}%, "
+                  f"End: {battery_end}%, "
+                  f"Used: {battery_start - battery_end}%")
+        
+        # Calculate flight time
+        if len(data) > 1:
+            duration = data[-1]['timestamp'] - data[0]['timestamp']
+            print(f"Flight duration: {duration:.1f}s ({duration/60:.1f}min)")
+
+
+class TelemetryVisualizer:
+    """Real-time telemetry visualization"""
+    
+    def __init__(self, logger, update_interval=100):
+        self.logger = logger
+        self.update_interval = update_interval
+        
+        # Setup plots
+        self.fig, self.axes = plt.subplots(3, 2, figsize=(12, 8))
+        self.fig.suptitle('Real-time Telemetry', fontsize=16)
+        
+        # Data containers
+        self.max_points = 200
+        self.times = deque(maxlen=self.max_points)
+        self.altitude = deque(maxlen=self.max_points)
+        self.speed = deque(maxlen=self.max_points)
+        self.battery = deque(maxlen=self.max_points)
+        self.heading = deque(maxlen=self.max_points)
+        self.lat = deque(maxlen=self.max_points)
+        self.lon = deque(maxlen=self.max_points)
+        
+        # Initialize lines
+        self.lines = {}
+        self._setup_plots()
+        
+    def _setup_plots(self):
+        """Setup subplot configuration"""
+        # Altitude plot
+        ax = self.axes[0, 0]
+        ax.set_title('Altitude')
+        ax.set_ylabel('Altitude (m)')
+        ax.grid(True, alpha=0.3)
+        self.lines['altitude'], = ax.plot([], [], 'b-')
+        
+        # Speed plot
+        ax = self.axes[0, 1]
+        ax.set_title('Ground Speed')
+        ax.set_ylabel('Speed (m/s)')
+        ax.grid(True, alpha=0.3)
+        self.lines['speed'], = ax.plot([], [], 'g-')
+        
+        # Battery plot
+        ax = self.axes[1, 0]
+        ax.set_title('Battery')
+        ax.set_ylabel('Battery (%)')
+        ax.set_ylim(0, 100)
+        ax.grid(True, alpha=0.3)
+        self.lines['battery'], = ax.plot([], [], 'r-')
+        
+        # Heading plot
+        ax = self.axes[1, 1]
+        ax.set_title('Heading')
+        ax.set_ylabel('Heading (deg)')
+        ax.set_ylim(0, 360)
+        ax.grid(True, alpha=0.3)
+        self.lines['heading'], = ax.plot([], [], 'm-')
+        
+        # GPS track
+        ax = self.axes[2, 0]
+        ax.set_title('GPS Track')
+        ax.set_xlabel('Longitude')
+        ax.set_ylabel('Latitude')
+        ax.grid(True, alpha=0.3)
+        self.lines['gps'], = ax.plot([], [], 'b.-')
+        
+        # Mode/Status text
+        ax = self.axes[2, 1]
+        ax.axis('off')
+        ax.set_title('Status')
+        self.status_text = ax.text(0.1, 0.5, '', fontsize=12, 
+                                   verticalalignment='center',
+                                   family='monospace')
+        
+    def update(self, frame):
+        """Update plots with new data"""
+        recent_data = self.logger.get_recent_data(self.max_points)
+        
+        if not recent_data:
+            return list(self.lines.values())
+        
+        # Extract data
+        start_time = recent_data[0]['timestamp']
+        
+        self.times.clear()
+        self.altitude.clear()
+        self.speed.clear()
+        self.battery.clear()
+        self.heading.clear()
+        self.lat.clear()
+        self.lon.clear()
+        
+        for data in recent_data:
+            self.times.append(data['timestamp'] - start_time)
+            self.altitude.append(data.get('altitude', 0))
+            self.speed.append(data.get('groundspeed', 0))
+            self.battery.append(data.get('battery', 0))
+            self.heading.append(data.get('heading', 0))
+            self.lat.append(data.get('latitude', 0))
+            self.lon.append(data.get('longitude', 0))
+        
+        # Update lines
+        times_list = list(self.times)
+        
+        self.lines['altitude'].set_data(times_list, list(self.altitude))
+        self.axes[0, 0].relim()
+        self.axes[0, 0].autoscale_view()
+        
+        self.lines['speed'].set_data(times_list, list(self.speed))
+        self.axes[0, 1].relim()
+        self.axes[0, 1].autoscale_view()
+        
+        self.lines['battery'].set_data(times_list, list(self.battery))
+        self.axes[1, 0].relim()
+        self.axes[1, 0].autoscale_view()
+        
+        self.lines['heading'].set_data(times_list, list(self.heading))
+        self.axes[1, 1].relim()
+        self.axes[1, 1].autoscale_view()
+        
+        self.lines['gps'].set_data(list(self.lon), list(self.lat))
+        self.axes[2, 0].relim()
+        self.axes[2, 0].autoscale_view()
+        
+        # Update status text
+        latest = recent_data[-1]
+        status = f"""
+Mode: {latest.get('mode', 'N/A')}
+Armed: {latest.get('armed', False)}
+Alt: {latest.get('altitude', 0):.1f}m
+Speed: {latest.get('groundspeed', 0):.1f}m/s
+Battery: {latest.get('battery', 0):.0f}%
+GPS Fix: {latest.get('gps', 0)}
+        """.strip()
+        self.status_text.set_text(status)
+        
+        return list(self.lines.values()) + [self.status_text]
+    
+    def start(self):
+        """Start real-time visualization"""
+        self.anim = FuncAnimation(self.fig, self.update,
+                                 interval=self.update_interval,
+                                 blit=False)
+        plt.tight_layout()
+        plt.show()
+
+
+class FlightRecorder:
+    """Complete flight recording system"""
+    
+    def __init__(self, drone_controller, log_dir='logs'):
+        self.drone = drone_controller
+        self.logger = TelemetryLogger(log_dir)
+        self.visualizer = None
+        self.recording = False
+        
+    def start_recording(self, visualize=True):
+        """Start recording telemetry"""
+        self.logger.start()
+        self.recording = True
+        
+        if visualize:
+            self.visualizer = TelemetryVisualizer(self.logger)
+            # Start visualization in separate thread if needed
+        
+        print("Flight recording started")
+        
+    def record_loop(self, interval=0.5):
+        """Main recording loop"""
+        try:
+            while self.recording:
+                telemetry = self.drone.get_telemetry()
+                self.logger.log(telemetry)
+                time.sleep(interval)
+        except KeyboardInterrupt:
+            print("\nRecording interrupted")
+        finally:
+            self.stop_recording()
+    
+    def stop_recording(self):
+        """Stop recording and save"""
+        self.recording = False
+        self.logger.stop()
+        self.logger.analyze()
+        print("Flight recording stopped")
+
+
+# Example usage
+if __name__ == "__main__":
+    # Create mock telemetry for testing
+    logger = TelemetryLogger(log_dir='logs')
+    logger.start()
+    
+    print("Generating mock telemetry data...")
+    
+    # Simulate flight
+    for i in range(300):
+        # Mock telemetry
+        telemetry = {
+            'mode': 'GUIDED' if i > 20 else 'STABILIZE',
+            'armed': i > 10,
+            'altitude': max(0, 10 * np.sin(i * 0.02)) if i > 20 else 0,
+            'latitude': 37.7749 + i * 0.00001,
+            'longitude': -122.4194 + i * 0.00001,
+            'heading': (i * 5) % 360,
+            'groundspeed': 5 if i > 20 else 0,
+            'airspeed': 5.2 if i > 20 else 0,
+            'battery': 100 - i * 0.1,
+            'gps': 3
+        }
+        
+        logger.log(telemetry)
+        time.sleep(0.05)
+        
+        if i % 50 == 0:
+            print(f"Logged {i} data points...")
+    
+    print("Stopping logger...")
+    logger.stop()
+    logger.analyze()
+    
+    # Visualize
+    print("\nStarting visualization...")
+    visualizer = TelemetryVisualizer(logger)
+    visualizer.start()
