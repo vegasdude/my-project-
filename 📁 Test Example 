@@ -1,0 +1,1 @@
+python policy/evaluator.py examples/sample_flight_plan.json
