@@ -1,0 +1,700 @@
+# Drone Policy & Compliance Folder
+
+Complete reference for drone regulations, compliance tools, and pre-flight checklists.
+
+---
+
+## Folder Structure
+
+```
+drone-policies/
+├── README.md
+├── regulations/
+│   ├── usa_faa_regulations.md
+│   ├── eu_easa_regulations.md
+│   ├── canada_transport_regulations.md
+│   └── international_overview.md
+├── checklists/
+│   ├── pre_flight_checklist.md
+│   ├── registration_checklist.md
+│   ├── part107_requirements.md
+│   └── commercial_operations.md
+├── tools/
+│   ├── airspace_checker.py
+│   ├── compliance_validator.py
+│   ├── flight_log_generator.py
+│   └── remote_id_simulator.py
+├── templates/
+│   ├── flight_plan_template.md
+│   ├── waiver_request_template.md
+│   ├── incident_report_template.md
+│   └── insurance_requirements.md
+├── resources/
+│   ├── laanc_guide.md
+│   ├── remote_id_guide.md
+│   ├── airspace_classes.md
+│   └── penalty_guidelines.md
+└── examples/
+    ├── recreational_flight_plan.md
+    ├── commercial_mission_plan.md
+    └── bvlos_waiver_example.md
+```
+
+---
+
+## File: regulations/usa_faa_regulations.md
+
+```markdown
+# United States FAA Drone Regulations (2025)
+
+**Last Updated:** January 2026
+
+## 🚨 BREAKING: Major 2025 Policy Changes
+
+### 1. Foreign Drone Ban (December 2025)
+- **Effective:** December 22, 2025
+- **Impact:** FCC added ALL foreign-manufactured drone components to "Covered List"
+- **Includes:** Batteries, motors, autopilots, controllers, cameras
+- **Affected Brands:** DJI, Autel, and all non-US manufacturers
+- **Status:** Existing drones grandfathered, but no NEW authorizations
+
+### 2. BVLOS Rules (Beyond Visual Line of Sight)
+- **Proposed:** August 2025
+- **Status:** Eliminates individual waivers for BVLOS operations
+- **Enables:** Drone deliveries, infrastructure monitoring, agriculture, emergency response
+- **Requirements:** Still being finalized
+
+### 3. Enhanced Critical Infrastructure Restrictions
+- **New:** Expanded restricted zones around federal facilities
+- **Includes:** Chemical plants, power stations, sporting events
+- **Requirement:** FAA must publish geofencing data in machine-readable formats
+
+---
+
+## Core FAA Rules
+
+### Recreational Flyers (The Exception for Recreational Flyers)
+
+**Basic Requirements:**
+1. **Altitude Limit:** Fly at or below 400 feet in Class G (uncontrolled) airspace
+2. **Visual Line of Sight:** Must keep drone in sight at all times (no FPV-only)
+3. **TRUST Test:** Complete The Recreational UAS Safety Test and carry proof
+4. **Registration:** 
+   - Required for drones over 250 grams (0.55 lbs)
+   - Register at FAA DroneZone: faadronezone.faa.gov
+   - Cost: $5 for 3 years
+   - Mark drone with registration number
+5. **Remote ID:** Required for all drones over 250g (since Sept 16, 2023)
+
+**Prohibited Actions:**
+- ❌ Flying over people (unless they're part of your operation)
+- ❌ Flying from moving vehicles
+- ❌ Flying at night without proper lighting and training
+- ❌ Flying in controlled airspace without authorization
+- ❌ Flying near airports without permission
+- ❌ Flying near emergency response operations
+- ❌ Flying under the influence of drugs/alcohol
+
+**Community-Based Organizations (CBO):**
+- Recreational flyers can follow CBO safety guidelines
+- Must notify airport/air traffic control if within 5 miles
+
+---
+
+### Commercial Operators (Part 107)
+
+**Certification Requirements:**
+1. **Age:** Must be at least 16 years old
+2. **Test:** Pass FAA Aeronautical Knowledge Test
+   - Cost: $175
+   - Valid: 24 months
+   - Covers: Airspace, weather, operations, regulations
+3. **TSA:** Must undergo TSA background check
+4. **Recurrent Training:** Every 24 months
+
+**Operation Limits:**
+- Maximum altitude: 400 feet AGL
+- Maximum speed: 100 mph (87 knots)
+- Visibility: 3 statute miles minimum
+- Weather: Must maintain cloud clearances
+- Daylight only (unless waiver granted)
+- Visual line of sight required
+- One drone per pilot at a time
+
+**Waivers Available For:**
+- Night operations
+- Operations over people
+- Operations from moving vehicles
+- Multiple drone operations
+- BVLOS operations (being streamlined)
+
+---
+
+## Registration Requirements
+
+### Who Must Register:
+- **Recreational:** Drones over 250 grams (0.55 lbs)
+- **Commercial:** ALL drones regardless of weight
+
+### Registration Process:
+1. Go to: https://faadronezone.faa.gov
+2. Create account
+3. Register drone(s)
+4. Pay $5 (recreational) or $5 per drone (commercial)
+5. Receive registration number
+6. Mark drone with number (exterior, visible without tools)
+
+### Registration Number Placement:
+- Must be on exterior of aircraft
+- Readable without tools
+- Can use removable label if meets requirements
+- Fire-resistant preferred
+
+---
+
+## Remote ID Requirements
+
+**Effective:** September 16, 2023
+
+**What is Remote ID?**
+- Broadcasts drone location, altitude, speed, and operator location
+- Think of it as a "digital license plate"
+- Required for all drones over 250g
+
+**Compliance Options:**
+1. **Standard Remote ID:** Built into drone (most new drones)
+2. **Remote ID Broadcast Module:** Add-on device for older drones
+3. **FAA-Recognized Identification Area (FRIA):** Fly at approved sites without Remote ID
+
+**Exceptions:**
+- Drones under 250g
+- Flying at FAA-Recognized Identification Areas
+- Drones built before September 2022 (with broadcast module)
+
+---
+
+## Airspace Classification
+
+### Class G (Uncontrolled)
+- **Authorization:** Not required
+- **Altitude:** Up to 400 feet AGL
+- **Most Common:** Rural areas, small towns
+
+### Class E (Controlled)
+- **Authorization:** Required via LAANC
+- **Type:** Controlled airspace at lower altitudes
+
+### Class D (Towered Airport)
+- **Authorization:** Required via LAANC or air traffic control
+- **Distance:** Typically 4 nautical miles from airport
+
+### Class C (Medium Airport)
+- **Authorization:** Required via LAANC
+- **Distance:** Typically 5-10 nautical miles from airport
+
+### Class B (Major Airport)
+- **Authorization:** Required, very restricted
+- **Distance:** Up to 30 nautical miles from airport
+- **Examples:** LAX, JFK, ORD
+
+### Special Use Airspace
+- **Military Operations Areas (MOAs)**
+- **Restricted Areas**
+- **Prohibited Areas**
+- **Temporary Flight Restrictions (TFRs)**
+
+---
+
+## LAANC (Low Altitude Authorization and Notification Capability)
+
+**What is LAANC?**
+- Automated system for airspace authorization
+- Near real-time approvals (seconds to minutes)
+- Available 24/7
+
+**How to Use:**
+1. Download LAANC-approved app (B4UFLY, Airmap, Aloft, etc.)
+2. Enter flight location and altitude
+3. Submit request
+4. Receive approval or denial
+5. Fly only if approved
+
+**Approval Time:**
+- Instant for many areas
+- Some require manual approval (hours to days)
+- Plan ahead for critical flights
+
+**LAANC Apps:**
+- B4UFLY (FAA official app)
+- Airmap
+- Aloft
+- Kittyhawk
+- UASidekick
+
+---
+
+## Penalties for Violations
+
+### Civil Penalties:
+- **Recreational:** Up to $1,437 per violation
+- **Commercial:** Up to $32,666 per violation
+- **Serious:** Up to $46,666 for violations endangering safety
+
+### Criminal Penalties:
+- **Reckless Operation:** Up to 1 year prison
+- **Interference with Manned Aircraft:** Up to 20 years prison
+- **Flying in Restricted Airspace:** Federal criminal charges
+
+### Common Violations:
+- Flying without registration: $27,500 fine
+- Flying in restricted airspace: $30,000+ fine
+- Flying near airports: Criminal charges possible
+- Interfering with emergency response: Severe penalties
+
+---
+
+## Insurance Requirements
+
+### Recommended Coverage:
+- **Recreational:** $1 million liability minimum
+- **Commercial:** $2-5 million liability
+- **Professional Services:** $5-10 million
+
+### What Insurance Covers:
+- Property damage
+- Bodily injury
+- Legal defense costs
+- Equipment damage (optional)
+
+### Providers:
+- SkyWatch
+- Thimble
+- Verifly
+- Coverdrone
+- Global Aerospace
+
+---
+
+## Resources
+
+### Official FAA Resources:
+- **FAA DroneZone:** https://faadronezone.faa.gov
+- **B4UFLY App:** https://www.faa.gov/uas/recreational_fliers/where_can_i_fly/b4ufly/
+- **Part 107 Study Guide:** https://www.faa.gov/uas/commercial_operators/
+- **Airspace Map:** https://faa.maps.arcgis.com/apps/webappviewer/index.html
+
+### Training Resources:
+- **TRUST Test (Free):** https://trust.knowbeforeyoufly.org/
+- **Part 107 Prep:** Pilot Institute, Remote Pilot 101
+- **Recurrent Training:** Available through various providers
+
+### Contact:
+- **FAA UAS Support:** 844-FLY-MY-UA (844-359-6982)
+- **Email:** uassupport@faa.gov
+```
+
+---
+
+## File: checklists/pre_flight_checklist.md
+
+```markdown
+# Pre-Flight Checklist
+
+**Date:** ___________  
+**Location:** ___________  
+**Pilot:** ___________  
+**Mission:** ___________
+
+---
+
+## ✅ Legal Compliance
+
+- [ ] Drone is registered with FAA
+- [ ] Registration number is visible on drone
+- [ ] Part 107 certificate valid (commercial) OR TRUST certificate (recreational)
+- [ ] Remote ID is functioning
+- [ ] Airspace authorization obtained (LAANC approval if needed)
+- [ ] No TFRs (Temporary Flight Restrictions) in area
+- [ ] Not within 5 miles of airport without permission
+- [ ] Insurance policy active and current
+
+---
+
+## ✅ Weather Check
+
+- [ ] Wind speed under limits (typically < 25 mph)
+- [ ] No precipitation forecast
+- [ ] Visibility at least 3 statute miles
+- [ ] Cloud ceiling appropriate (typically 400+ feet AGL)
+- [ ] Temperature within drone operating range
+- [ ] No lightning forecast within 30 miles
+- [ ] Checked METAR/TAF if available
+
+**Current Conditions:**
+- Wind: _____ mph from _____
+- Temperature: _____ °F
+- Visibility: _____ miles
+- Clouds: _____
+
+---
+
+## ✅ Equipment Check
+
+### Drone:
+- [ ] Battery fully charged (____ %)
+- [ ] Spare batteries charged and ready
+- [ ] Propellers installed correctly and undamaged
+- [ ] Motors spin freely, no obstructions
+- [ ] Camera/gimbal functional
+- [ ] SD card installed with sufficient space
+- [ ] Firmware up to date
+- [ ] Sensors calibrated (compass, IMU, GPS)
+- [ ] Landing gear deployed
+- [ ] Visual/LED lights working
+
+### Controller:
+- [ ] Controller battery charged (____ %)
+- [ ] Controller linked to drone
+- [ ] Return-to-home altitude set appropriately
+- [ ] Geofencing settings configured
+- [ ] Emergency return-to-home tested
+
+### Safety Equipment:
+- [ ] Fire extinguisher available
+- [ ] First aid kit on site
+- [ ] High-visibility vest (if required)
+- [ ] Two-way communication with spotter (if used)
+
+---
+
+## ✅ Site Assessment
+
+- [ ] Launch area clear of obstacles
+- [ ] Emergency landing zones identified
+- [ ] No people under flight path
+- [ ] Power lines identified and marked
+- [ ] Trees and buildings mapped
+- [ ] Wildlife hazards assessed
+- [ ] Ground crew briefed
+- [ ] Spotter positioned (if required)
+- [ ] No manned aircraft visible/audible
+
+**Site Hazards:**
+1. _____________________
+2. _____________________
+3. _____________________
+
+---
+
+## ✅ Flight Planning
+
+- [ ] Flight path planned and loaded
+- [ ] Altitude limits set (max 400 ft AGL)
+- [ ] Geofence boundaries configured
+- [ ] Mission duration calculated
+- [ ] Battery reserve planned (min 20%)
+- [ ] Alternate landing sites identified
+- [ ] Lost link behavior configured
+- [ ] Low battery return-to-home set
+
+**Flight Parameters:**
+- Max Altitude: _____ feet
+- Estimated Duration: _____ minutes
+- Battery Reserve: _____ %
+- Return-to-Home Altitude: _____ feet
+
+---
+
+## ✅ Pre-Start Procedure
+
+- [ ] Pre-flight announcement made (if public area)
+- [ ] Area secured and clear
+- [ ] Controller powered on first
+- [ ] Drone powered on second
+- [ ] GPS lock achieved (min 8 satellites)
+- [ ] Home point set and confirmed
+- [ ] Compass calibrated if needed
+- [ ] Control inputs tested (all axes)
+- [ ] Return-to-home tested (optional)
+- [ ] Camera/payload tested
+
+---
+
+## ✅ During Flight
+
+- [ ] Maintain visual line of sight
+- [ ] Monitor battery level continuously
+- [ ] Watch for manned aircraft
+- [ ] Keep within altitude limits
+- [ ] Stay within authorized airspace
+- [ ] Monitor weather changes
+- [ ] Communicate with spotter
+- [ ] Log any anomalies
+
+---
+
+## ✅ Post-Flight
+
+- [ ] Land safely in designated area
+- [ ] Power off drone before controller
+- [ ] Inspect drone for damage
+- [ ] Download flight logs
+- [ ] Secure equipment
+- [ ] Note any issues for maintenance
+- [ ] Complete flight log documentation
+- [ ] Review footage/data
+- [ ] Charge batteries for next flight
+
+**Post-Flight Notes:**
+_____________________
+_____________________
+_____________________
+
+---
+
+## Emergency Procedures
+
+### Lost Link:
+1. Drone will execute RTH automatically
+2. Do not power off controller
+3. Regain signal if possible
+4. Monitor drone return path
+
+### Low Battery:
+1. Initiate RTH immediately
+2. Reduce altitude if safe
+3. Land at nearest safe location
+4. Do not attempt to extend flight
+
+### Flyaway:
+1. Attempt to regain control
+2. Initiate RTH if possible
+3. Monitor last known position
+4. Call FAA if aircraft endangered
+5. Report incident
+
+### Motor Failure:
+1. Let drone auto-land if possible
+2. Clear landing area
+3. Do not attempt manual control
+4. Ground immediately
+
+**Emergency Contacts:**
+- FAA: 844-FLY-MY-UA
+- Local Airport Tower: _____
+- Emergency Services: 911
+- Insurance: _____
+
+---
+
+**Pilot Signature:** ___________  
+**Date/Time:** ___________
+```
+
+---
+
+## File: tools/airspace_checker.py
+
+```python
+"""
+Airspace Compliance Checker
+Validates flight location against FAA regulations
+"""
+import requests
+import json
+from typing import Tuple, Dict
+import math
+
+class AirspaceChecker:
+    """Check if location is safe for drone flight"""
+    
+    def __init__(self):
+        self.airports = self.load_airport_data()
+        self.tfr_api = "https://tfr.faa.gov/tfr2/list.html"
+        
+    def load_airport_data(self):
+        """Load airport database (simplified - use real FAA data in production)"""
+        # This would load from FAA database
+        # Using sample data here
+        return [
+            {"name": "LAX", "lat": 33.9416, "lon": -118.4085, "class": "B", "radius": 30},
+            {"name": "SFO", "lat": 37.6213, "lon": -122.3790, "class": "B", "radius": 30},
+            # Add more airports...
+        ]
+    
+    def check_location(self, lat: float, lon: float, altitude: float) -> Dict:
+        """
+        Check if location is compliant for flight
+        
+        Args:
+            lat: Latitude in degrees
+            lon: Longitude in degrees
+            altitude: Planned altitude in feet AGL
+            
+        Returns:
+            Dictionary with compliance status and warnings
+        """
+        result = {
+            "compliant": True,
+            "warnings": [],
+            "errors": [],
+            "airspace_class": "G",
+            "laanc_required": False,
+            "nearest_airport": None
+        }
+        
+        # Check altitude
+        if altitude > 400:
+            result["compliant"] = False
+            result["errors"].append(f"Altitude {altitude}ft exceeds 400ft AGL limit")
+        
+        # Check distance from airports
+        nearest = self.find_nearest_airport(lat, lon)
+        if nearest:
+            result["nearest_airport"] = nearest
+            distance = nearest["distance"]
+            airport_class = nearest["class"]
+            
+            if airport_class == "B" and distance < 30:
+                result["compliant"] = False
+                result["errors"].append(
+                    f"Within Class B airspace of {nearest['name']} "
+                    f"({distance:.1f}nm). LAANC authorization required."
+                )
+                result["laanc_required"] = True
+                result["airspace_class"] = "B"
+                
+            elif airport_class in ["C", "D"] and distance < 10:
+                result["warnings"].append(
+                    f"Within controlled airspace of {nearest['name']} "
+                    f"({distance:.1f}nm). LAANC authorization required."
+                )
+                result["laanc_required"] = True
+                result["airspace_class"] = airport_class
+                
+            elif distance < 5:
+                result["warnings"].append(
+                    f"Within 5nm of {nearest['name']}. "
+                    f"Notify airport/ATC if recreational flight."
+                )
+        
+        # Check for TFRs (in production, call real FAA API)
+        # tfr_check = self.check_tfrs(lat, lon)
+        # if tfr_check:
+        #     result["compliant"] = False
+        #     result["errors"].append("Active TFR in area")
+        
+        return result
+    
+    def find_nearest_airport(self, lat: float, lon: float) -> Dict:
+        """Find nearest airport and calculate distance"""
+        nearest = None
+        min_distance = float('inf')
+        
+        for airport in self.airports:
+            distance = self.calculate_distance(
+                lat, lon,
+                airport["lat"], airport["lon"]
+            )
+            
+            if distance < min_distance:
+                min_distance = distance
+                nearest = airport.copy()
+                nearest["distance"] = distance
+        
+        return nearest
+    
+    def calculate_distance(self, lat1: float, lon1: float, 
+                          lat2: float, lon2: float) -> float:
+        """Calculate distance in nautical miles"""
+        # Haversine formula
+        R = 3440.065  # Earth radius in nautical miles
+        
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        
+        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+        c = 2 * math.asin(math.sqrt(a))
+        
+        return R * c
+    
+    def generate_report(self, lat: float, lon: float, altitude: float):
+        """Generate human-readable compliance report"""
+        result = self.check_location(lat, lon, altitude)
+        
+        print("\n" + "="*60)
+        print("AIRSPACE COMPLIANCE CHECK")
+        print("="*60)
+        print(f"Location: {lat:.6f}, {lon:.6f}")
+        print(f"Altitude: {altitude} feet AGL")
+        print(f"Airspace Class: {result['airspace_class']}")
+        print(f"LAANC Required: {'YES' if result['laanc_required'] else 'NO'}")
+        
+        if result['nearest_airport']:
+            airport = result['nearest_airport']
+            print(f"\nNearest Airport: {airport['name']} ({airport['class']})")
+            print(f"Distance: {airport['distance']:.1f} nautical miles")
+        
+        print(f"\nCOMPLIANCE STATUS: {'✅ PASS' if result['compliant'] else '❌ FAIL'}")
+        
+        if result['errors']:
+            print("\n❌ ERRORS:")
+            for error in result['errors']:
+                print(f"  - {error}")
+        
+        if result['warnings']:
+            print("\n⚠️  WARNINGS:")
+            for warning in result['warnings']:
+                print(f"  - {warning}")
+        
+        if result['compliant'] and not result['warnings']:
+            print("\n✅ Safe to fly at this location!")
+        
+        print("="*60 + "\n")
+        
+        return result
+
+
+# Example usage
+if __name__ == "__main__":
+    checker = AirspaceChecker()
+    
+    # Test locations
+    test_cases = [
+        {"name": "Rural Area", "lat": 39.5, "lon": -105.5, "alt": 350},
+        {"name": "Near LAX", "lat": 33.95, "lon": -118.40, "alt": 300},
+        {"name": "Over 400ft", "lat": 37.7749, "lon": -122.4194, "alt": 450},
+    ]
+    
+    for test in test_cases:
+        print(f"\nTesting: {test['name']}")
+        checker.generate_report(test['lat'], test['lon'], test['alt'])
+```
+
+---
+
+## File: tools/compliance_validator.py
+
+```python
+"""
+Drone Compliance Validator
+Validates pilot and drone compliance with FAA regulations
+"""
+from datetime import datetime, timedelta
+from typing import Dict, List
+
+class ComplianceValidator:
+    """Validate drone and pilot compliance"""
+    
+    def __init__(self):
+        self.required_recreational = [
+            "drone_registered",
+            "trust_certificate",
+            "remote_id_enabled",
+            "registration_marked"
+        ]
+        
+        self.required_commercial = [
+            "drone_registered",
+            "part10
