@@ -1,0 +1,10 @@
+drone-policy/
+ ├── README.md
+ ├── LICENSE
+ ├── policy/
+ │    ├── rules.json
+ │    └── evaluator.py
+ ├── examples/
+ │    └── sample_flight_plan.json
+ └── tests/
+      └── test_policy.py
