@@ -1,0 +1,241 @@
+"""
+YOLO Object Detection Module
+Real-time object detection using YOLOv8
+"""
+import cv2
+import numpy as np
+from ultralytics import YOLO
+import time
+
+class YOLODetector:
+    def __init__(self, model_path='yolov8n.pt', conf_threshold=0.5):
+        """
+        Initialize YOLO detector
+        
+        Args:
+            model_path: Path to YOLO model (n=nano, s=small, m=medium, l=large, x=xlarge)
+            conf_threshold: Confidence threshold for detections
+        """
+        print(f"Loading YOLO model: {model_path}")
+        self.model = YOLO(model_path)
+        self.conf_threshold = conf_threshold
+        self.class_names = self.model.names
+        self.detections = []
+        
+    def detect(self, frame):
+        """
+        Run detection on frame
+        
+        Args:
+            frame: Input image/frame
+            
+        Returns:
+            annotated_frame: Frame with bounding boxes
+            detections: List of detection dictionaries
+        """
+        results = self.model(frame, conf=self.conf_threshold, verbose=False)
+        
+        self.detections = []
+        annotated_frame = frame.copy()
+        
+        for result in results:
+            boxes = result.boxes
+            
+            for box in boxes:
+                # Get box coordinates
+                x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                
+                # Get confidence and class
+                conf = float(box.conf[0])
+                cls = int(box.cls[0])
+                class_name = self.class_names[cls]
+                
+                # Store detection
+                detection = {
+                    'bbox': (x1, y1, x2, y2),
+                    'center': ((x1 + x2) // 2, (y1 + y2) // 2),
+                    'confidence': conf,
+                    'class_id': cls,
+                    'class_name': class_name
+                }
+                self.detections.append(detection)
+                
+                # Draw on frame
+                color = self._get_color(cls)
+                cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
+                
+                # Add label
+                label = f"{class_name} {conf:.2f}"
+                (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
+                cv2.rectangle(annotated_frame, (x1, y1 - 20), (x1 + w, y1), color, -1)
+                cv2.putText(annotated_frame, label, (x1, y1 - 5),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+        
+        return annotated_frame, self.detections
+    
+    def detect_specific_class(self, frame, target_class):
+        """
+        Detect only specific class
+        
+        Args:
+            frame: Input frame
+            target_class: Class name to detect (e.g., 'person', 'car')
+            
+        Returns:
+            detections: List of detections for target class
+        """
+        _, all_detections = self.detect(frame)
+        return [d for d in all_detections if d['class_name'] == target_class]
+    
+    def track_largest_object(self, frame, target_class=None):
+        """
+        Track the largest detected object
+        
+        Args:
+            frame: Input frame
+            target_class: Optional class filter
+            
+        Returns:
+            largest_detection: Detection dict of largest object or None
+        """
+        _, detections = self.detect(frame)
+        
+        if target_class:
+            detections = [d for d in detections if d['class_name'] == target_class]
+        
+        if not detections:
+            return None
+        
+        # Find largest by area
+        largest = max(detections, key=lambda d: 
+                     (d['bbox'][2] - d['bbox'][0]) * (d['bbox'][3] - d['bbox'][1]))
+        
+        return largest
+    
+    def get_tracking_offset(self, detection, frame_width, frame_height):
+        """
+        Calculate normalized offset from frame center
+        
+        Args:
+            detection: Detection dictionary
+            frame_width: Frame width in pixels
+            frame_height: Frame height in pixels
+            
+        Returns:
+            (offset_x, offset_y): Normalized offsets (-1 to 1)
+        """
+        if not detection:
+            return None, None
+        
+        cx, cy = detection['center']
+        offset_x = (cx - frame_width / 2) / (frame_width / 2)
+        offset_y = (cy - frame_height / 2) / (frame_height / 2)
+        
+        return offset_x, offset_y
+    
+    def _get_color(self, class_id):
+        """Generate consistent color for class"""
+        np.random.seed(class_id)
+        return tuple(map(int, np.random.randint(0, 255, 3)))
+
+
+class DroneYOLOTracker:
+    """Integrate YOLO with drone control"""
+    
+    def __init__(self, drone_controller, detector):
+        self.drone = drone_controller
+        self.detector = detector
+        self.target_class = None
+        
+    def follow_object(self, target_class='person', kp=0.5):
+        """
+        Follow detected object with drone
+        
+        Args:
+            target_class: Object class to follow
+            kp: Proportional control gain
+        """
+        cap = cv2.VideoCapture(0)
+        
+        print(f"Starting object following: {target_class}")
+        
+        try:
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                
+                # Detect target
+                detection = self.detector.track_largest_object(frame, target_class)
+                
+                if detection:
+                    # Calculate offset
+                    h, w = frame.shape[:2]
+                    offset_x, offset_y = self.detector.get_tracking_offset(detection, w, h)
+                    
+                    # Simple proportional control
+                    # Adjust drone velocity based on offset
+                    vx = offset_x * kp
+                    vy = -offset_y * kp  # Invert Y for drone coordinates
+                    
+                    print(f"Target: {detection['class_name']}, "
+                          f"Offset: ({offset_x:.2f}, {offset_y:.2f}), "
+                          f"Velocity: ({vx:.2f}, {vy:.2f})")
+                    
+                    # Send velocity command to drone
+                    # self.drone.send_velocity(vx, vy, 0)
+                
+                # Display
+                annotated, _ = self.detector.detect(frame)
+                cv2.imshow('Drone Tracking', annotated)
+                
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                    
+        finally:
+            cap.release()
+            cv2.destroyAllWindows()
+
+
+# Example usage
+if __name__ == "__main__":
+    # Initialize detector
+    detector = YOLODetector(model_path='yolov8n.pt', conf_threshold=0.5)
+    
+    # Test with webcam
+    cap = cv2.VideoCapture(0)
+    
+    fps_start = time.time()
+    frame_count = 0
+    
+    print("Starting detection... Press 'q' to quit")
+    
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        # Run detection
+        annotated_frame, detections = detector.detect(frame)
+        
+        # Calculate FPS
+        frame_count += 1
+        if frame_count % 30 == 0:
+            fps = 30 / (time.time() - fps_start)
+            fps_start = time.time()
+            print(f"FPS: {fps:.1f}, Detections: {len(detections)}")
+        
+        # Display detections
+        if detections:
+            for det in detections:
+                print(f"  - {det['class_name']}: {det['confidence']:.2f}")
+        
+        # Show frame
+        cv2.imshow('YOLO Detection', annotated_frame)
+        
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    
+    cap.release()
+    cv2.destroyAllWindows()
