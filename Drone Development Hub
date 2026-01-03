@@ -1,0 +1,683 @@
+import React, { useState } from 'react';
+import { Rocket, Code, Eye, Radio, Cpu, Map, Users, Shield, Book, Github } from 'lucide-react';
+
+const DroneDevHub = () => {
+  const [activeCategory, setActiveCategory] = useState('overview');
+  const [selectedProject, setSelectedProject] = useState(null);
+
+  const categories = {
+    overview: {
+      icon: Rocket,
+      title: 'Getting Started',
+      color: 'bg-blue-500'
+    },
+    firmware: {
+      icon: Cpu,
+      title: 'Flight Control',
+      color: 'bg-purple-500'
+    },
+    sdk: {
+      icon: Code,
+      title: 'Development SDKs',
+      color: 'bg-green-500'
+    },
+    vision: {
+      icon: Eye,
+      title: 'Computer Vision',
+      color: 'bg-orange-500'
+    },
+    communication: {
+      icon: Radio,
+      title: 'Protocols',
+      color: 'bg-pink-500'
+    },
+    navigation: {
+      icon: Map,
+      title: 'Autonomous Nav',
+      color: 'bg-cyan-500'
+    },
+    swarm: {
+      icon: Users,
+      title: 'Swarm Control',
+      color: 'bg-indigo-500'
+    },
+    security: {
+      icon: Shield,
+      title: 'Security Research',
+      color: 'bg-red-500'
+    }
+  };
+
+  const projects = {
+    overview: [
+      {
+        name: 'Environment Setup',
+        repo: 'Your First Drone Project',
+        description: 'Complete development environment setup guide',
+        steps: [
+          'Install Python 3.8+ and pip',
+          'Set up virtual environment: python -m venv drone-env',
+          'Install DroneKit: pip install dronekit dronekit-sitl',
+          'Install MAVProxy: pip install MAVProxy',
+          'Clone starter repo: git clone https://github.com/dronekit/dronekit-python',
+          'Test with simulator: dronekit-sitl copter'
+        ],
+        quickstart: `# Quick Start Script
+python -m venv drone-env
+source drone-env/bin/activate  # Windows: drone-env\\Scripts\\activate
+pip install dronekit dronekit-sitl MAVProxy
+dronekit-sitl copter --home=37.7749,-122.4194,0,0`
+      },
+      {
+        name: 'Mission Planning Basics',
+        repo: 'github.com/dronekit/dronekit-python',
+        description: 'Create your first autonomous mission',
+        steps: [
+          'Connect to vehicle (real or simulated)',
+          'Arm and takeoff sequence',
+          'Navigate to waypoints',
+          'Return to launch (RTL)',
+          'Safe landing procedures'
+        ],
+        quickstart: `from dronekit import connect, VehicleMode
+import time
+
+# Connect to simulator
+vehicle = connect('127.0.0.1:14550', wait_ready=True)
+
+# Arm and takeoff
+vehicle.mode = VehicleMode("GUIDED")
+vehicle.armed = True
+vehicle.simple_takeoff(10)  # 10m altitude
+
+# Wait to reach altitude
+while vehicle.location.global_relative_frame.alt < 9.5:
+    time.sleep(1)
+
+print("Reached target altitude!")
+vehicle.mode = VehicleMode("RTL")  # Return to launch`
+      }
+    ],
+    firmware: [
+      {
+        name: 'ArduPilot',
+        repo: 'github.com/ArduPilot/ardupilot',
+        description: 'Most versatile open-source autopilot system',
+        steps: [
+          'Clone: git clone --recurse-submodules https://github.com/ArduPilot/ardupilot',
+          'Install dependencies: Tools/environment_install/install-prereqs-ubuntu.sh',
+          'Configure for copter: ./waf configure --board Pixhawk1',
+          'Build firmware: ./waf copter',
+          'Flash to flight controller or run SITL'
+        ],
+        quickstart: `# Build and run simulation
+cd ardupilot
+./waf configure --board sitl
+./waf copter
+sim_vehicle.py -v ArduCopter --console --map`
+      },
+      {
+        name: 'PX4 Autopilot',
+        repo: 'github.com/PX4/PX4-Autopilot',
+        description: 'Professional-grade flight control with ROS2 support',
+        steps: [
+          'Clone: git clone https://github.com/PX4/PX4-Autopilot.git --recursive',
+          'Run Ubuntu setup: bash ./PX4-Autopilot/Tools/setup/ubuntu.sh',
+          'Build for simulator: make px4_sitl gazebo',
+          'Test with QGroundControl',
+          'Deploy to hardware: make px4_fmu-v5_default upload'
+        ],
+        quickstart: `# Quick simulation test
+cd PX4-Autopilot
+make px4_sitl gazebo
+# In another terminal
+QGroundControl`
+      },
+      {
+        name: 'Betaflight',
+        repo: 'github.com/betaflight/betaflight',
+        description: 'High-performance racing drone firmware',
+        steps: [
+          'Download Betaflight Configurator',
+          'Connect flight controller via USB',
+          'Flash firmware version matching your FC',
+          'Configure ports, modes, and PID tuning',
+          'Calibrate ESCs and test motors'
+        ],
+        quickstart: `# Install configurator
+# Download from: github.com/betaflight/betaflight-configurator/releases
+# Or use Chrome app (deprecated) or standalone
+
+# CLI commands for advanced config
+set motor_pwm_protocol = DSHOT600
+set pid_process_denom = 1
+save`
+      }
+    ],
+    sdk: [
+      {
+        name: 'MAVSDK Python',
+        repo: 'github.com/mavlink/MAVSDK-Python',
+        description: 'Modern async Python SDK for drone control',
+        steps: [
+          'Install: pip install mavsdk',
+          'Start PX4 SITL simulator',
+          'Connect and test basic commands',
+          'Implement mission upload',
+          'Add telemetry monitoring'
+        ],
+        quickstart: `import asyncio
+from mavsdk import System
+
+async def run():
+    drone = System()
+    await drone.connect(system_address="udp://:14540")
+    
+    print("Waiting for drone...")
+    async for state in drone.core.connection_state():
+        if state.is_connected:
+            print("Drone connected!")
+            break
+    
+    # Arm and takeoff
+    await drone.action.arm()
+    await drone.action.takeoff()
+    await asyncio.sleep(10)
+    await drone.action.land()
+
+asyncio.run(run())`
+      },
+      {
+        name: 'DroneKit-Python',
+        repo: 'github.com/dronekit/dronekit-python',
+        description: 'Simple Pythonic vehicle control for ArduPilot',
+        steps: [
+          'Install: pip install dronekit',
+          'Connect to vehicle or SITL',
+          'Monitor vehicle attributes',
+          'Send simple commands',
+          'Create mission waypoints'
+        ],
+        quickstart: `from dronekit import connect, VehicleMode, LocationGlobalRelative
+
+vehicle = connect('udp:127.0.0.1:14550')
+
+# Get vehicle attributes
+print("Autopilot version: %s" % vehicle.version)
+print("Battery: %s" % vehicle.battery)
+print("GPS: %s" % vehicle.gps_0)
+
+# Fly to location
+point = LocationGlobalRelative(37.7749, -122.4194, 20)
+vehicle.simple_goto(point)
+
+vehicle.close()`
+      },
+      {
+        name: 'ROS2 Integration',
+        repo: 'github.com/PX4/px4_ros_com',
+        description: 'Robot Operating System integration for advanced autonomy',
+        steps: [
+          'Install ROS2 Humble/Foxy',
+          'Set up PX4-ROS2 bridge',
+          'Create custom ROS2 nodes',
+          'Implement sensor fusion',
+          'Deploy navigation stack'
+        ],
+        quickstart: `# Install dependencies
+sudo apt install ros-humble-desktop
+pip3 install --user -U empy pyros-genmsg setuptools
+
+# Clone and build
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws/src
+git clone https://github.com/PX4/px4_ros_com.git
+git clone https://github.com/PX4/px4_msgs.git
+cd ..
+colcon build`
+      }
+    ],
+    vision: [
+      {
+        name: 'OpenCV Tracking',
+        repo: 'github.com/opencv/opencv',
+        description: 'Real-time object detection and tracking',
+        steps: [
+          'Install OpenCV: pip install opencv-python',
+          'Capture video from drone camera',
+          'Implement color-based tracking',
+          'Add feature detection (ORB, SIFT)',
+          'Send position commands to drone'
+        ],
+        quickstart: `import cv2
+import numpy as np
+
+# Color tracking example
+cap = cv2.VideoCapture(0)
+
+while True:
+    ret, frame = cap.read()
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    
+    # Track red objects
+    lower_red = np.array([0, 120, 70])
+    upper_red = np.array([10, 255, 255])
+    mask = cv2.inRange(hsv, lower_red, upper_red)
+    
+    # Find contours
+    contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    if contours:
+        c = max(contours, key=cv2.contourArea)
+        M = cv2.moments(c)
+        if M["m00"] != 0:
+            cx = int(M["m10"] / M["m00"])
+            cy = int(M["m01"] / M["m00"])
+            cv2.circle(frame, (cx, cy), 5, (255, 0, 0), -1)
+            print(f"Target at: {cx}, {cy}")
+    
+    cv2.imshow('Tracking', frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()`
+      },
+      {
+        name: 'YOLO Object Detection',
+        repo: 'github.com/ultralytics/ultralytics',
+        description: 'State-of-the-art real-time object detection',
+        steps: [
+          'Install: pip install ultralytics',
+          'Download YOLOv8 model',
+          'Run inference on drone feed',
+          'Track detected objects',
+          'Integrate with flight control'
+        ],
+        quickstart: `from ultralytics import YOLO
+import cv2
+
+# Load model
+model = YOLO('yolov8n.pt')  # nano model for speed
+
+# Video capture
+cap = cv2.VideoCapture(0)
+
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
+    
+    # Run detection
+    results = model(frame)
+    
+    # Visualize
+    annotated = results[0].plot()
+    cv2.imshow('YOLOv8', annotated)
+    
+    # Get detections
+    for r in results:
+        boxes = r.boxes
+        for box in boxes:
+            cls = int(box.cls[0])
+            conf = float(box.conf[0])
+            print(f"Detected: {model.names[cls]} ({conf:.2f})")
+    
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()`
+      }
+    ],
+    communication: [
+      {
+        name: 'MAVLink Protocol',
+        repo: 'github.com/mavlink/mavlink',
+        description: 'Lightweight messaging protocol for drones',
+        steps: [
+          'Install: pip install pymavlink',
+          'Connect to vehicle telemetry',
+          'Parse MAVLink messages',
+          'Send custom commands',
+          'Log flight data'
+        ],
+        quickstart: `from pymavlink import mavutil
+
+# Connect to vehicle
+master = mavutil.mavlink_connection('udp:127.0.0.1:14550')
+master.wait_heartbeat()
+print("Heartbeat received")
+
+# Request data streams
+master.mav.request_data_stream_send(
+    master.target_system,
+    master.target_component,
+    mavutil.mavlink.MAV_DATA_STREAM_ALL,
+    10,  # Hz
+    1    # start
+)
+
+# Read messages
+while True:
+    msg = master.recv_match(blocking=True)
+    if msg:
+        print(msg)`
+      },
+      {
+        name: 'MSP Protocol',
+        repo: 'github.com/betaflight/betaflight',
+        description: 'MultiWii Serial Protocol for Betaflight/iNav',
+        steps: [
+          'Install: pip install pyMultiWii',
+          'Connect via serial/USB',
+          'Read flight controller status',
+          'Send RC commands',
+          'Configure settings via MSP'
+        ],
+        quickstart: `import serial
+import struct
+
+# MSP message format
+MSP_STATUS = 101
+MSP_RC = 105
+
+def send_msp_request(ser, cmd):
+    # Build MSP request
+    msg = struct.pack('<BBBB', ord('$'), ord('M'), ord('<'), 0)
+    msg += struct.pack('<B', cmd)
+    
+    checksum = 0
+    for b in msg[3:]:
+        checksum ^= b
+    msg += struct.pack('<B', checksum)
+    
+    ser.write(msg)
+
+# Connect to FC
+ser = serial.Serial('/dev/ttyUSB0', 115200)
+send_msp_request(ser, MSP_STATUS)
+response = ser.read(1024)
+print(f"Status: {response.hex()}")`
+      }
+    ],
+    navigation: [
+      {
+        name: 'Waypoint Navigation',
+        repo: 'github.com/ArduPilot/ardupilot',
+        description: 'Autonomous GPS-based navigation',
+        steps: [
+          'Define waypoint list',
+          'Upload mission to vehicle',
+          'Monitor progress',
+          'Handle failsafes',
+          'Dynamic waypoint updates'
+        ],
+        quickstart: `from dronekit import connect, VehicleMode, LocationGlobalRelative, Command
+from pymavlink import mavutil
+
+vehicle = connect('127.0.0.1:14550', wait_ready=True)
+
+# Create mission
+cmds = vehicle.commands
+cmds.clear()
+
+# Home position
+home = LocationGlobalRelative(37.7749, -122.4194, 0)
+
+# Add waypoints
+wp1 = LocationGlobalRelative(37.7750, -122.4195, 20)
+wp2 = LocationGlobalRelative(37.7751, -122.4196, 20)
+wp3 = LocationGlobalRelative(37.7752, -122.4197, 20)
+
+cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                 mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0,
+                 wp1.lat, wp1.lon, wp1.alt))
+cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                 mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0,
+                 wp2.lat, wp2.lon, wp2.alt))
+
+cmds.upload()
+print("Mission uploaded!")
+
+# Execute
+vehicle.mode = VehicleMode("AUTO")
+vehicle.armed = True`
+      },
+      {
+        name: 'Path Planning',
+        repo: 'github.com/AtsushiSakai/PythonRobotics',
+        description: 'A*, RRT, and other path planning algorithms',
+        steps: [
+          'Define start and goal positions',
+          'Create obstacle map',
+          'Run path planning algorithm',
+          'Convert to waypoints',
+          'Send to drone for execution'
+        ],
+        quickstart: `import numpy as np
+from collections import deque
+
+def a_star(start, goal, obstacles, grid_size=100):
+    """Simple A* implementation"""
+    open_set = [(start, 0, heuristic(start, goal))]
+    closed_set = set()
+    came_from = {}
+    g_score = {start: 0}
+    
+    while open_set:
+        open_set.sort(key=lambda x: x[2])
+        current, g, f = open_set.pop(0)
+        
+        if current == goal:
+            # Reconstruct path
+            path = []
+            while current in came_from:
+                path.append(current)
+                current = came_from[current]
+            return path[::-1]
+        
+        closed_set.add(current)
+        
+        for neighbor in get_neighbors(current, grid_size):
+            if neighbor in closed_set or neighbor in obstacles:
+                continue
+            
+            tentative_g = g_score[current] + 1
+            
+            if neighbor not in g_score or tentative_g < g_score[neighbor]:
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative_g
+                f_score = tentative_g + heuristic(neighbor, goal)
+                open_set.append((neighbor, tentative_g, f_score))
+    
+    return None
+
+def heuristic(a, b):
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+def get_neighbors(pos, size):
+    x, y = pos
+    neighbors = []
+    for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
+        nx, ny = x + dx, y + dy
+        if 0 <= nx < size and 0 <= ny < size:
+            neighbors.append((nx, ny))
+    return neighbors`
+      }
+    ],
+    swarm: [
+      {
+        name: 'Crazyswarm',
+        repo: 'github.com/USC-ACTLab/crazyswarm',
+        description: 'Research platform for Crazyflie nano-quadcopters',
+        steps: [
+          'Install ROS and Crazyswarm',
+          'Configure Crazyflie addresses',
+          'Test individual flight',
+          'Implement formation control',
+          'Deploy swarm choreography'
+        ],
+        quickstart: `# Crazyswarm Python API
+from pycrazyswarm import Crazyswarm
+
+swarm = Crazyswarm()
+timeHelper = swarm.timeHelper
+allcfs = swarm.allcfs
+
+# Takeoff
+allcfs.takeoff(targetHeight=1.0, duration=2.0)
+timeHelper.sleep(3.0)
+
+# Formation flight
+for cf in allcfs.crazyflies:
+    pos = cf.initialPosition + np.array([0, 0, 1.0])
+    cf.goTo(pos, 0, 2.0)
+
+timeHelper.sleep(3.0)
+
+# Land
+allcfs.land(targetHeight=0.02, duration=2.0)
+timeHelper.sleep(3.0)`
+      },
+      {
+        name: 'Multi-Agent Coordination',
+        repo: 'Custom Implementation',
+        description: 'Distributed control for drone swarms',
+        steps: [
+          'Implement consensus algorithms',
+          'Add collision avoidance',
+          'Create formation controllers',
+          'Test communication protocols',
+          'Deploy distributed missions'
+        ],
+        quickstart: `import numpy as np
+
+class SwarmController:
+    def __init__(self, num_drones):
+        self.positions = np.random.rand(num_drones, 3) * 10
+        self.velocities = np.zeros((num_drones, 3))
+        self.safe_distance = 2.0
+    
+    def update(self, dt=0.1):
+        # Separation: avoid crowding neighbors
+        separation = self.separation_force()
+        
+        # Alignment: steer towards average heading
+        alignment = self.alignment_force()
+        
+        # Cohesion: steer towards average position
+        cohesion = self.cohesion_force()
+        
+        # Update velocities and positions
+        self.velocities += (separation + alignment + cohesion) * dt
+        self.positions += self.velocities * dt
+    
+    def separation_force(self):
+        force = np.zeros_like(self.positions)
+        for i in range(len(self.positions)):
+            for j in range(len(self.positions)):
+                if i != j:
+                    diff = self.positions[i] - self.positions[j]
+                    dist = np.linalg.norm(diff)
+                    if dist < self.safe_distance:
+                        force[i] += diff / (dist ** 2)
+        return force
+    
+    def alignment_force(self):
+        avg_vel = np.mean(self.velocities, axis=0)
+        return avg_vel - self.velocities
+    
+    def cohesion_force(self):
+        center = np.mean(self.positions, axis=0)
+        return center - self.positions
+
+# Usage
+swarm = SwarmController(num_drones=10)
+for _ in range(100):
+    swarm.update()
+    print(f"Positions: {swarm.positions}")`
+      }
+    ],
+    security: [
+      {
+        name: 'RF Analysis (Educational)',
+        repo: 'github.com/miek/inspectrum',
+        description: 'Analyze drone radio frequencies with RTL-SDR',
+        steps: [
+          'Install RTL-SDR tools: sudo apt install rtl-sdr',
+          'Scan for drone frequencies (2.4GHz, 5.8GHz)',
+          'Capture and analyze signals',
+          'Identify communication protocols',
+          'Only analyze your own equipment'
+        ],
+        quickstart: `# Scan for signals
+rtl_power -f 2400M:2500M:1k -g 50 -i 1 output.csv
+
+# Record IQ samples
+rtl_sdr -f 2450M -s 2.4M -g 40 capture.iq
+
+# Analyze with inspectrum
+inspectrum capture.iq
+
+# Python analysis with pyrtlsdr
+from rtlsdr import RtlSdr
+import numpy as np
+
+sdr = RtlSdr()
+sdr.sample_rate = 2.4e6
+sdr.center_freq = 2.45e9
+sdr.gain = 40
+
+samples = sdr.read_samples(256*1024)
+print(f"Captured {len(samples)} samples")
+sdr.close()`
+      },
+      {
+        name: 'Encrypted Communications',
+        repo: 'github.com/mavlink/mavlink',
+        description: 'Implement secure drone-to-GCS links',
+        steps: [
+          'Generate encryption keys',
+          'Implement MAVLink v2 signing',
+          'Add TLS for WiFi links',
+          'Test encrypted telemetry',
+          'Monitor for anomalies'
+        ],
+        quickstart: `from pymavlink import mavutil
+import hashlib
+
+# MAVLink signing setup
+secret_key = b'your-secret-key-here-keep-this-safe!'
+
+master = mavutil.mavlink_connection('udp:127.0.0.1:14550')
+
+# Enable signing
+master.setup_signing(secret_key, sign_outgoing=True, allow_unsigned_callback=None)
+
+print("MAVLink signing enabled")
+
+# All messages now authenticated with HMAC-SHA-256
+while True:
+    msg = master.recv_match(blocking=True)
+    if msg:
+        print(f"Authenticated message: {msg.get_type()}")`
+      },
+      {
+        name: 'Drone Detection System',
+        repo: 'Custom Implementation',
+        description: 'Build RF/acoustic/visual drone detection',
+        steps: [
+          'Set up sensor array (RF, microphone, camera)',
+          'Implement signal processing',
+          'Train ML model for classification',
+          'Create alert system',
+          'Test detection accuracy'
+        ],
+        quickstart: `import numpy as np
+from scipy import signal
+import cv2
+
+class DroneDetector:
+    def __init__(self):
+        self.rf_threshold = 
